@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<TabbedPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:BlazorMauiApp1"
+             x:Class="BlazorMauiApp1.MainPage"
+             xmlns:andriod="clr-namespace:Microsoft.Maui.Controls.PlatformConfiguration.AndroidSpecific;assembly=Microsoft.Maui.Controls"
+            andriod:TabbedPage.ToolbarPlacement="Bottom"
+            andriod:TabbedPage.IsSmoothScrollEnabled="True"
+            andriod:TabbedPage.IsSwipePagingEnabled="False"
+            BarBackgroundColor="Wheat"
+            BarTextColor="Black"
+            xmlns:pages="clr-namespace:BlazorMauiApp1.Components.Pages"
+            xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit">
+
+    <ContentPage Title="Home" IconImageSource="/weather-icon.png">
+        <BlazorWebView  HostPage="wwwroot/index.html">
+            <BlazorWebView.RootComponents>
+                <RootComponent Selector="#app" ComponentType="{x:Type pages:Home}" />
+            </BlazorWebView.RootComponents>
+        </BlazorWebView>
+    </ContentPage>
+    <ContentPage Title="Counter" IconImageSource="counter-icon.svg">
+        <BlazorWebView  HostPage="wwwroot/index.html">
+            <BlazorWebView.RootComponents>
+                <RootComponent Selector="#app" ComponentType="{x:Type pages:Counter}" />
+            </BlazorWebView.RootComponents>
+        </BlazorWebView>
+    </ContentPage>
+    <ContentPage Title="Weather" IconImageSource="weather-icon.svg">
+        <BlazorWebView  HostPage="wwwroot/index.html">
+            <BlazorWebView.RootComponents>
+                <RootComponent Selector="#app" ComponentType="{x:Type pages:Weather}" />
+            </BlazorWebView.RootComponents>
+        </BlazorWebView>
+    </ContentPage>
+    <ContentPage Title="Songs" IconImageSource="songs-icon.svg">
+        <Grid RowDefinitions="Auto,*">
+            <toolkit:MediaElement x:Name="mediaPlayer"
+                                  Volume="1.0"
+                                  HeightRequest="0" />
+            <BlazorWebView Grid.Row="1"
+                           HostPage="wwwroot/index.html">
+                <BlazorWebView.RootComponents>
+                    <RootComponent Selector="#app" ComponentType="{x:Type pages:SongPage}" />
+                </BlazorWebView.RootComponents>
+            </BlazorWebView>
+        </Grid>
+    </ContentPage>
+    <ContentPage Title="Internal Songs" IconImageSource="songs-icon.svg">
+        <BlazorWebView  HostPage="wwwroot/index.html">
+            <BlazorWebView.RootComponents>
+                <RootComponent Selector="#app" ComponentType="{x:Type pages:InternalSongsPage}" />
+            </BlazorWebView.RootComponents>
+        </BlazorWebView>
+    </ContentPage>
+    <ContentPage Title="Profile" IconImageSource="profile-icon.svg">
+        <BlazorWebView  HostPage="wwwroot/index.html">
+            <BlazorWebView.RootComponents>
+                <RootComponent Selector="#app" ComponentType="{x:Type pages:Profile}" />
+            </BlazorWebView.RootComponents>
+        </BlazorWebView>
+    </ContentPage>
+
+</TabbedPage>

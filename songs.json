@@ -1,0 +1,32 @@
+[
+  {
+    "Title": "Summertime Sadness",
+    "Artist": "Lana Del Rey",
+    "ThumbnailUrl": "Assests/summertime_sadness.jpeg",
+    "AudioUrl": "wwwroot/Audios/summertime_sadness.mp3"
+  },
+  {
+    "Title": "Therefore I Am",
+    "Artist": "Billie Eilish",
+    "ThumbnailUrl": "Assests/tf.jpg",
+    "AudioUrl": "wwwroot/Audios/tf.mp3"
+  },
+  {
+    "Title": "Young and Beautiful",
+    "Artist": "Lana Del Rey",
+    "ThumbnailUrl": "Assests/yb.jpeg",
+    "AudioUrl": "wwwroot/Audios/yb.mp3"
+  },
+  {
+    "Title": "The Hanging Tree",
+    "Artist": "Jennifer Lawrence",
+    "ThumbnailUrl": "Assests/ht.jpg",
+    "AudioUrl": "wwwroot/Audios/ht.mp3"
+  },
+  {
+    "Title": "Minnalvalla",
+    "Artist": "Sid Sriram",
+    "ThumbnailUrl": "Assests/m.jpg",
+    "AudioUrl": "wwwroot/Audios/m.mp3"
+  }
+]

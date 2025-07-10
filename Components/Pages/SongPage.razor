@@ -1,0 +1,546 @@
+@page "/songs"
+@using System.Text.Json
+@using BlazorMauiApp1.Models
+@using Microsoft.Maui.ApplicationModel
+@inject IJSRuntime JS
+@inject IServiceProvider ServiceProvider
+
+<div class="container py-4 mb-5">
+    <h2 class="text-center mb-4">Music Player</h2>
+
+    <div class="row mb-3 justify-content-center">
+        <div class="col-12 col-md-6">
+            <input class="form-control" type="text" placeholder="Search songs or artists..." @bind="searchTerm"
+                @bind:event="oninput" />
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loader-overlay">
+            <div class="d-flex flex-column align-items-center justify-content-center h-100">
+                <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+                <div class="fw-semibold">Loading your music...</div>
+                <div class="text-muted small">Scanning device storage</div>
+            </div>
+        </div>
+    }
+    else if (FilteredSongs.Count == 0)
+    {
+        <p class="text-danger text-center">No songs found.</p>
+    }
+    else
+    {
+        <div class="row row-cols-2 g-4 mb-4">
+            @foreach (var song in FilteredSongs.Take(displayedSongsCount))
+            {
+                <div class="col">
+                    <div class="card h-100 shadow-sm border-0
+                        @(CurrentSong == song ? "border-primary border-2 bg-primary bg-opacity-10 shadow" : "")"
+                        style="cursor:pointer" @onclick="() => PlaySong(song)">
+                        <img src="/music-icon.svg" class="card-img-top object-fit-cover album-art" alt="music icon"
+                            style="height: 150px;" />
+                        <div class="card-body text-center">
+                            <h6 class="card-title mb-1 @(CurrentSong == song ? "fw-bold text-primary" : "")">@song.Title</h6>
+                            <p class="card-text text-muted mb-0">@song.Artist</p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (displayedSongsCount < AllSongs.Count)
+        {
+            <div class="text-center mb-4">
+                <button class="btn btn-outline-primary" @onclick="LoadMoreSongs">
+                    Load More Songs (@(AllSongs.Count - displayedSongsCount) remaining)
+                </button>
+            </div>
+        }
+    }
+</div>
+
+@if (CurrentSong != null)
+{
+    <div class="music-controls fixed-bottom bg-light border-top shadow-lg px-2 py-2" style="z-index: 1050;">
+        <div class="container">
+            <div class="d-flex align-items-center justify-content-between">
+                <img src="/music-icon.svg" class="rounded shadow-sm me-2" alt="music icon"
+                    style="width: 44px; height: 44px; object-fit: cover;" />
+                <div class="flex-grow-1 me-2 min-width-0">
+                    <div class="fw-semibold text-truncate song-title-scroll">@CurrentSong.Title</div>
+                    <div class="text-muted small text-truncate artist-name-scroll">@CurrentSong.Artist</div>
+                    <div class="music-visualizer @(isPlaying ? "playing" : "")" @onclick="OnVisualizerClick" @onmousedown="() => isSeeking = true" @onmouseup="() => isSeeking = false" @ref="visualizerElement">
+                        <div class="visualizer-bars">
+                            @for (int i = 0; i < 20; i++)
+                            {
+                                <div class="visualizer-bar"></div>
+                            }
+                        </div>
+                        <div class="visualizer-progress" style="width: @(duration > 0 ? (progress / duration * 100) : 0)%"></div>
+                        <div class="visualizer-handle" style="left: @(duration > 0 ? (progress / duration * 100) : 0)%"></div>
+                    </div>
+                    <div class="d-flex justify-content-between small">
+                        <span>@FormatTime(progress)</span>
+                        <span>@FormatTime(duration)</span>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2 ms-2 flex-shrink-0">
+                    <button
+                        class="btn btn-outline-primary rounded-circle p-0 d-flex align-items-center justify-content-center"
+                        style="width:36px;height:36px;" @onclick="PrevSong" title="Previous">
+                        <i class="bi bi-skip-backward-fill fs-5"></i>
+                    </button>
+                    <button class="btn btn-primary rounded-circle p-0 d-flex align-items-center justify-content-center"
+                        style="width:44px;height:44px;" @onclick="TogglePlayPause" title="Play/Pause">
+                        <i class="bi @(isPlaying ? "bi-pause-fill" : "bi-play-fill") fs-4"></i>
+                    </button>
+                    <button
+                        class="btn btn-outline-primary rounded-circle p-0 d-flex align-items-center justify-content-center"
+                        style="width:36px;height:36px;" @onclick="NextSong" title="Next">
+                        <i class="bi bi-skip-forward-fill fs-5"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 2000;">
+    @foreach (var toast in toasts)
+    {
+        <div class="toast show" role="alert">
+            <div
+                class="toast-header @(toast.Type == "error" ? "text-danger" : toast.Type == "success" ? "text-success" : "text-info")">
+                <i
+                    class="bi @(toast.Type == "error" ? "bi-exclamation-triangle-fill" : toast.Type == "success" ? "bi-check-circle-fill" : "bi-info-circle-fill") me-2"></i>
+                <strong class="me-auto">@toast.Title</strong>
+                <button type="button" class="btn-close" @onclick="() => RemoveToast(toast.Id)"></button>
+            </div>
+            <div class="toast-body">
+                @toast.Message
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Song> Songs = new();
+    private List<Song> AllSongs = new();
+    private List<Song> FilteredSongs => string.IsNullOrWhiteSpace(searchTerm)
+        ? Songs
+        : AllSongs.Where(s => (s.Title?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (s.Artist?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)).ToList();
+    private Song? CurrentSong;
+    private int currentIndex = -1;
+    private bool isPlaying = true;
+    private bool isRepeat = false;
+    private bool isLoading = true;
+
+    private string searchTerm = string.Empty;
+    private double progress = 0;
+    private double duration = 1;
+    private bool isSeeking = false;
+    private IDispatcherTimer? timer;
+    private bool mediaOpenedHandlerSet = false;
+
+    private int displayedSongsCount = 100;
+    private List<Toast> toasts = new();
+    private ElementReference visualizerElement;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Console.WriteLine("🎵 Starting to load songs...");
+            Console.WriteLine("🔧 Testing dependency service...");
+
+            await Task.Run(async () =>
+            {
+                var audioService = ServiceProvider.GetService<IAudioFileService>();
+                Console.WriteLine($"🔧 AudioService found: {audioService != null}");
+                Console.WriteLine($"🔧 AudioService type: {audioService?.GetType().FullName}");
+
+                if (audioService != null)
+                {
+                    Console.WriteLine("📱 Calling GetAudioFilesAsync...");
+                    var audioFiles = await audioService.GetAudioFilesAsync();
+                    Console.WriteLine($"📁 Found {audioFiles.Count} audio files from device");
+
+                    var processedSongs = audioFiles.Select(songData =>
+                    {
+                        try
+                        {
+                            using var document = JsonDocument.Parse(songData);
+                            var root = document.RootElement;
+
+                            if (root.TryGetProperty("FilePath", out var filePathElement))
+                            {
+                                var filePath = filePathElement.GetString();
+                                var title = root.TryGetProperty("Title", out var titleElement) ? titleElement.GetString() : "Unknown Title";
+                                var artist = root.TryGetProperty("Artist", out var artistElement) ? artistElement.GetString() : "Unknown Artist";
+                                var album = root.TryGetProperty("Album", out var albumElement) ? albumElement.GetString() : "Unknown Album";
+
+                                Console.WriteLine($"🎵 Parsed JSON - Title: {title}, Artist: {artist}, Album: {album}");
+                                Console.WriteLine($"🎵 File Path: {filePath}");
+
+                                var cleanTitle = CleanTitle(title);
+                                var cleanArtist = CleanArtist(artist);
+
+                                return new Song
+                                {
+                                    Title = cleanTitle ?? "Unknown Title",
+                                    Artist = cleanArtist ?? "Unknown Artist",
+                                    AudioUrl = filePath,
+                                    ThumbnailUrl = "/wwwroot/music-icon.svg"
+                                };
+                            }
+
+                            return null;
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"❌ JSON parsing error: {ex.Message}");
+                            Console.WriteLine($"❌ Raw data: {songData}");
+                        }
+
+                        return new Song
+                        {
+                            Title = System.IO.Path.GetFileNameWithoutExtension(songData),
+                            Artist = "Unknown Artist",
+                            AudioUrl = songData,
+                            ThumbnailUrl = "/wwwroot/music-icon.svg"
+                        };
+                    })
+                    .Where(song => song != null)
+                    .Cast<Song>()
+                    .ToList();
+
+                    await MainThread.InvokeOnMainThreadAsync(() =>
+                    {
+                        AllSongs = processedSongs;
+                        Songs = processedSongs.Take(displayedSongsCount).ToList();
+                        Console.WriteLine($"🎵 Created {Songs.Count} Song objects (showing first {displayedSongsCount})");
+                        ShowToast("Songs Loaded", $"Successfully loaded {processedSongs.Count} songs from your device.", "success");
+                    });
+                }
+                else
+                {
+                    Console.WriteLine("❌ AudioService is null!");
+                }
+
+                if (AllSongs.Count == 0)
+                {
+                    Console.WriteLine("📄 Falling back to JSON file...");
+                    using var stream = await FileSystem.OpenAppPackageFileAsync("songs.json");
+                    using var reader = new StreamReader(stream);
+                    var json = await reader.ReadToEndAsync();
+                    var jsonSongs = JsonSerializer.Deserialize<List<Song>>(json) ?? new();
+
+                    await MainThread.InvokeOnMainThreadAsync(() =>
+                    {
+                        AllSongs = jsonSongs;
+                        Songs = jsonSongs.Take(displayedSongsCount).ToList();
+                        Console.WriteLine($"📄 Loaded {Songs.Count} songs from JSON");
+                        ShowToast("Songs Loaded", $"Loaded {jsonSongs.Count} songs from backup file.", "info");
+                    });
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error: {ex.Message}");
+            Console.WriteLine($"❌ Stack trace: {ex.StackTrace}");
+            ShowToast("Error", "Failed to load songs. Please try again.", "error");
+        }
+        isLoading = false;
+        Console.WriteLine($"✅ Loading complete. Total songs: {AllSongs.Count}");
+    }
+
+    private async void PlaySong(Song song)
+    {
+        try
+        {
+            CurrentSong = song;
+            currentIndex = AllSongs.IndexOf(song);
+            isPlaying = true;
+
+            Uri uri;
+
+            if (System.IO.File.Exists(song.AudioUrl))
+            {
+                uri = new Uri($"file://{song.AudioUrl}");
+            }
+            else if (Uri.IsWellFormedUriString(song.AudioUrl, UriKind.Absolute))
+            {
+                uri = new Uri(song.AudioUrl, UriKind.Absolute);
+            }
+            else
+            {
+#if ANDROID
+var fileName = System.IO.Path.GetFileName(song.AudioUrl);
+var localPath = System.IO.Path.Combine(FileSystem.CacheDirectory, fileName);
+
+if (!File.Exists(localPath))
+{
+using var assetStream = await FileSystem.OpenAppPackageFileAsync(song.AudioUrl);
+using var fileStream = File.Create(localPath);
+await assetStream.CopyToAsync(fileStream);
+}
+uri = new Uri($"file://{localPath}");
+#else
+                var basePath = FileSystem.CacheDirectory;
+                var localPath = System.IO.Path.Combine(basePath, song.AudioUrl);
+                uri = new Uri($"file://{localPath}");
+#endif
+            }
+
+            progress = 0;
+            duration = 1;
+
+            MainPage.MediaPlayerInstance!.Source = uri;
+
+            if (!mediaOpenedHandlerSet)
+            {
+                MainPage.MediaPlayerInstance.MediaOpened += (s, e) =>
+                {
+                    duration = MainPage.MediaPlayerInstance.Duration.TotalSeconds;
+                    progress = 0;
+                    StateHasChanged();
+                };
+                mediaOpenedHandlerSet = true;
+            }
+
+            MainPage.MediaPlayerInstance.Play();
+            StartTimer();
+
+            ShowToast("Now Playing", $"{song.Title} by {song.Artist}", "success");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error playing song: {ex.Message}");
+            ShowToast("Playback Error", $"Could not play '{song.Title}'. The file might be corrupted.", "error");
+        }
+    }
+
+    private void TogglePlayPause()
+    {
+        if (MainPage.MediaPlayerInstance == null) return;
+
+        try
+        {
+            if (isPlaying)
+                MainPage.MediaPlayerInstance.Pause();
+            else
+                MainPage.MediaPlayerInstance.Play();
+
+            isPlaying = !isPlaying;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error toggling play/pause: {ex.Message}");
+            ShowToast("Playback Error", "Could not control playback. The file might be corrupted.", "error");
+        }
+    }
+
+    private void NextSong()
+    {
+        if (AllSongs.Count == 0) return;
+
+        currentIndex = (currentIndex + 1) % AllSongs.Count;
+        PlaySong(AllSongs[currentIndex]);
+    }
+
+    private void PrevSong()
+    {
+        if (AllSongs.Count == 0) return;
+
+        currentIndex = (currentIndex - 1 + AllSongs.Count) % AllSongs.Count;
+        PlaySong(AllSongs[currentIndex]);
+    }
+
+    private void ToggleRepeat()
+    {
+        isRepeat = !isRepeat;
+    }
+
+    private void OnSeekInput(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), out double val))
+        {
+            progress = val;
+        }
+    }
+
+    private async void OnVisualizerClick(MouseEventArgs e)
+    {
+        if (MainPage.MediaPlayerInstance == null || duration <= 0) return;
+        
+        try
+        {
+            var clickX = e.OffsetX;
+            var totalWidth = await JS.InvokeAsync<double>("getElementWidth", visualizerElement);
+            var percentage = Math.Max(0, Math.Min(1, clickX / totalWidth));
+            var newTime = duration * percentage;
+            
+            MainPage.MediaPlayerInstance.SeekTo(TimeSpan.FromSeconds(newTime));
+            progress = newTime;
+            isSeeking = false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in visualizer click: {ex.Message}");
+        }
+    }
+
+    private void OnSeekChange(ChangeEventArgs e)
+    {
+        if (MainPage.MediaPlayerInstance == null) return;
+        if (double.TryParse(e.Value?.ToString(), out double val))
+        {
+            MainPage.MediaPlayerInstance.SeekTo(TimeSpan.FromSeconds(val));
+            progress = val;
+        }
+        isSeeking = false;
+    }
+
+    private void StartTimer()
+    {
+        timer?.Stop();
+        timer = Application.Current?.Dispatcher.CreateTimer();
+
+        if (timer != null)
+        {
+            timer.Interval = TimeSpan.FromMilliseconds(200);
+            timer.Tick += Timer_Tick;
+            timer.Start();
+        }
+    }
+
+    private void Timer_Tick(object? sender, EventArgs e)
+    {
+        if (MainPage.MediaPlayerInstance != null && !isSeeking)
+        {
+            progress = MainPage.MediaPlayerInstance.Position.TotalSeconds;
+            duration = MainPage.MediaPlayerInstance.Duration.TotalSeconds;
+
+            if (!isRepeat && progress >= duration && duration > 1)
+            {
+                NextSong();
+            }
+            StateHasChanged();
+        }
+    }
+
+    private string FormatTime(double seconds)
+    {
+        if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds < 0)
+            return "00:00";
+        var ts = TimeSpan.FromSeconds(seconds);
+        return ts.ToString(@"mm\:ss");
+    }
+
+    private async void TestAudioService()
+    {
+        Console.WriteLine("🧪 Testing Audio Service...");
+        var audioService = ServiceProvider.GetService<IAudioFileService>();
+        Console.WriteLine($"🔧 AudioService found: {audioService != null}");
+
+        if (audioService != null)
+        {
+            try
+            {
+                var files = await audioService.GetAudioFilesAsync();
+                Console.WriteLine($"📁 Test found {files.Count} files");
+                foreach (var file in files.Take(5))
+                {
+                    Console.WriteLine($"📁 File: {file}");
+                }
+                ShowToast("Test Complete", $"Found {files.Count} audio files on device.", "success");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Test error: {ex.Message}");
+                ShowToast("Test Failed", "Could not access audio files. Check permissions.", "error");
+            }
+        }
+    }
+
+    private string? CleanTitle(string? title)
+    {
+        if (string.IsNullOrEmpty(title)) return null;
+
+        title = title.Replace(".mp3", "").Replace(".m4a", "").Replace(".wav", "");
+        title = title.Replace("-VmusiQ.Com", "").Replace("-VmusiQ", "");
+        title = title.Replace("-StarMusiQ.Com", "").Replace("-StarMusiQ", "");
+        title = title.Replace("24.", "").Replace("25.", "").Replace("26.", "").Replace("27.", "").Replace("28.",
+        "").Replace("29.", "").Replace("30.", "");
+        title = title.Replace("01.", "").Replace("02.", "").Replace("03.", "").Replace("04.", "").Replace("05.",
+        "").Replace("06.", "").Replace("07.", "").Replace("08.", "").Replace("09.", "").Replace("10.", "");
+        title = title.Replace("11.", "").Replace("12.", "").Replace("13.", "").Replace("14.", "").Replace("15.",
+        "").Replace("16.", "").Replace("17.", "").Replace("18.", "").Replace("19.", "").Replace("20.", "");
+        title = title.Replace("21.", "").Replace("22.", "").Replace("23.", "");
+
+        title = title.Replace("_", " ");
+
+        return title.Trim();
+    }
+
+    private string? CleanArtist(string? artist)
+    {
+        if (string.IsNullOrEmpty(artist)) return null;
+
+        artist = artist.Replace(".mp3", "").Replace(".m4a", "").Replace(".wav", "");
+        artist = artist.Replace("-VmusiQ.Com", "").Replace("-VmusiQ", "");
+        artist = artist.Replace("-StarMusiQ.Com", "").Replace("-StarMusiQ", "");
+        artist = artist.Replace("24.", "").Replace("25.", "").Replace("26.", "").Replace("27.", "").Replace("28.",
+        "").Replace("29.", "").Replace("30.", "");
+        artist = artist.Replace("01.", "").Replace("02.", "").Replace("03.", "").Replace("04.", "").Replace("05.",
+        "").Replace("06.", "").Replace("07.", "").Replace("08.", "").Replace("09.", "").Replace("10.", "");
+        artist = artist.Replace("11.", "").Replace("12.", "").Replace("13.", "").Replace("14.", "").Replace("15.",
+        "").Replace("16.", "").Replace("17.", "").Replace("18.", "").Replace("19.", "").Replace("20.", "");
+        artist = artist.Replace("21.", "").Replace("22.", "").Replace("23.", "");
+
+        artist = artist.Replace("_", " ");
+
+        return artist.Trim();
+    }
+
+
+
+    private void LoadMoreSongs()
+    {
+        displayedSongsCount += 100;
+        Songs = AllSongs.Take(displayedSongsCount).ToList();
+        StateHasChanged();
+        ShowToast("Songs Loaded", $"Now showing {Math.Min(displayedSongsCount, AllSongs.Count)} of {AllSongs.Count} songs.", "info");
+    }
+
+    private void ShowToast(string title, string message, string type = "info")
+    {
+        var toastId = Guid.NewGuid().ToString();
+        toasts.Add(new Toast { Id = toastId, Title = title, Message = message, Type = type });
+        StateHasChanged();
+        Task.Delay(3000).ContinueWith(_ =>
+        {
+            MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                RemoveToast(toastId);
+            });
+        });
+    }
+
+    private void RemoveToast(string toastId)
+    {
+        toasts.RemoveAll(t => t.Id == toastId);
+        StateHasChanged();
+    }
+
+    private class Toast
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public string Type { get; set; } = "info";
+    }
+}

@@ -1,0 +1,114 @@
+# ===============================
+# .NET + MAUI + Blazor .gitignore
+# ===============================
+
+# Build results
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider
+.idea/
+
+# Visual Studio Code
+.vscode/
+
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
+
+# User-specific files
+*.rsuser
+*.userprefs
+*.pidb
+*.booproj
+
+# OS generated files
+.DS_Store
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Build artifacts
+*.dll
+*.exe
+*.app
+*.apk
+*.aab
+*.msi
+*.msm
+*.msp
+*.pdb
+
+# NuGet packages
+*.nupkg
+*.snupkg
+packages/
+.nuget/
+project.lock.json
+project.fragment.lock.json
+
+# Xamarin/Maui build artifacts
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+*.jar
+*.apk
+*.ipa
+*.xcuserstate
+*.xcuserdatad/
+*.mode1v3
+*.mode2v3
+*.ncb
+*.pbxuser
+*.pdb
+*.sdf
+*.suo
+*.xcodeproj/*
+*.xcworkspace/*
+
+# Platform build output
+**/bin/
+**/obj/
+**/platforms/android/app/build/
+
+# IDE specific
+*.dbmdl
+*.bak
+*.Backup
+*.tmp
+
+# dotCover
+*.dotCover
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# Auto-generated items
+wwwroot/Assets/generated/
+wwwroot/Audios/generated/
+
+# Local secrets and configs (optional)
+secrets.json
+appsettings.Development.json
+
+# VS for Mac
+*.userprefs
+
+# Maui Hot Reload cache
+**/.vs/
+**/.vsconfig
+
+# Optional: prevent committing large local MP3s/images
+# Uncomment if needed
+# wwwroot/Assets/*.jpg
+# wwwroot/Audios/*.mp3
+

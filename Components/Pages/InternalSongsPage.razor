@@ -1,0 +1,38 @@
+@page "/internal-songs"
+@inject IJSRuntime JS
+
+<h3>Internal Storage Songs</h3>
+
+@if (isLoading)
+{
+    <p>Loading...</p>
+}
+else if (songs.Count == 0)
+{
+    <p>No songs found.</p>
+}
+else
+{
+    <ul>
+        @foreach (var song in songs)
+        {
+            <li>@song</li>
+        }
+    </ul>
+}
+
+@code {
+    private List<string> songs = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        var audioService = DependencyService.Get<IAudioFileService>();
+        if (audioService != null)
+        {
+            songs = await audioService.GetAudioFilesAsync();
+        }
+        isLoading = false;
+    }
+}

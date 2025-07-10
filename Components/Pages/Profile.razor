@@ -1,0 +1,96 @@
+@page "/profile"
+@using Microsoft.Maui.Storage
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-7 col-lg-5">
+            <div class="card shadow-lg border-0 p-4">
+                <div class="d-flex flex-column align-items-center mb-4">
+                    <img src="https://ui-avatars.com/api/?name=@(UserName ?? "User")&background=0D8ABC&color=fff&size=128"
+                        class="rounded-circle shadow mb-3" style="width: 96px; height: 96px; object-fit: cover;"
+                        alt="avatar" />
+                    <button class="btn btn-outline-secondary btn-sm mb-2" disabled>Change Avatar</button>
+                </div>
+                <form @onsubmit="SaveProfile">
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <div class="input-group">
+                            <input class="form-control" @bind="UserName" placeholder="Enter username" maxlength="32"
+                                required />
+                            <button type="button" class="btn btn-outline-primary"
+                                @onclick="() => EditField(nameof(UserName))">Edit</button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <div class="input-group">
+                            <input class="form-control" @bind="Email" placeholder="Enter email" maxlength="64"
+                                type="email" required />
+                            <button type="button" class="btn btn-outline-primary"
+                                @onclick="() => EditField(nameof(Email))">Edit</button>
+                        </div>
+                    </div>
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-success">Save Profile</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(ToastMessage))
+    {
+        <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000;">
+            <div class="toast show align-items-center text-white @ToastBgClass border-0" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">@ToastMessage</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" @onclick="HideToast"></button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string? UserName { get; set; } = string.Empty;
+    private string? Email { get; set; } = string.Empty;
+    private string ToastMessage = string.Empty;
+    private string ToastBgClass = "bg-success";
+
+    protected override void OnInitialized()
+    {
+        // Load from app storage
+        UserName = Preferences.Get("profile_username", "User");
+        Email = Preferences.Get("profile_email", "user@email.com");
+    }
+
+    private void EditField(string field)
+    {
+        // Optionally focus the field or show a dialog; here, fields are always editable
+    }
+
+    private async Task SaveProfile()
+    {
+        try
+        {
+            Preferences.Set("profile_username", UserName ?? "User");
+            Preferences.Set("profile_email", Email ?? "user@email.com");
+            ToastBgClass = "bg-success";
+            ToastMessage = "Profile saved successfully!";
+        }
+        catch
+        {
+            ToastBgClass = "bg-danger";
+            ToastMessage = "Failed to save profile.";
+        }
+        StateHasChanged();
+        await Task.Delay(2000);
+        HideToast();
+    }
+
+    private void HideToast()
+    {
+        ToastMessage = string.Empty;
+        StateHasChanged();
+    }
+}

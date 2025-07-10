@@ -1,0 +1,157 @@
+@page "/weather"
+@using BlazorMauiApp1.Models
+
+<h2 class="text-center my-4">🌤️ Weather Forecast - India</h2>
+
+<div class="container">
+
+    <!-- Error Display -->
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger text-center">@errorMessage</div>
+    }
+
+    <!-- Temperature Unit Toggle -->
+    <div class="form-check form-switch d-flex justify-content-end mb-3">
+        <input class="form-check-input" type="checkbox" role="switch" id="unitToggle" @bind="isFahrenheit" />
+        <label class="form-check-label ms-2" for="unitToggle">
+            Show in @((isFahrenheit ? "Fahrenheit (°F)" : "Celsius (°C)"))
+        </label>
+    </div>
+
+    <!-- City Search -->
+    <div class="row mb-3">
+        <div class="col-md-6 mx-auto">
+            <input class="form-control" type="text" placeholder="Search city..." @bind="searchTerm" @bind:event="oninput" />
+        </div>
+    </div>
+
+    <!-- City Dropdown -->
+    <div class="row mb-4">
+        <div class="col-md-6 mx-auto">
+            <select class="form-select" @onchange="OnCitySelected">
+                <option disabled selected value="">-- Select a city --</option>
+                @foreach (var city in FilteredCities)
+                {
+                    <option value="@city">@city</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    @if (isLoading)
+    {
+        <div class="text-center my-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+
+    <!-- Forecast -->
+    @if (!isLoading && forecast != null)
+    {
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <!-- Current Weather -->
+                <div class="card shadow-sm mb-4 text-center">
+                    <div class="card-body">
+                        <h4>@forecast.Location.Name, @forecast.Location.Region</h4>
+                        <p>
+                            <strong>Now:</strong>
+                            @(isFahrenheit ? $"{forecast.Current.TempF} °F" : $"{forecast.Current.TempC} °C") -
+                            @forecast.Current.Condition.Text
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 7-Day Forecast -->
+                <div class="row row-cols-1 row-cols-md-3 g-4">
+                    @foreach (var day in forecast.Forecast.Forecastday)
+                    {
+                        <div class="col">
+                            <div class="card h-100 text-center">
+                                <div class="card-body">
+                                    <h5 class="card-title">@day.Date.ToString("MMM dd")</h5>
+                                    <img src="https:@day.Day.Condition.Icon" alt="icon" />
+                                    <p class="card-text">
+                                        <strong>Max:</strong> @(isFahrenheit ? $"{day.Day.MaxTempF} °F" : $"{day.Day.MaxTempC} °C")<br />
+                                        <strong>Min:</strong> @(isFahrenheit ? $"{day.Day.MinTempF} °F" : $"{day.Day.MinTempC} °C")
+                                    </p>
+                                    <p>@day.Day.Condition.Text</p>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string? selectedCity;
+    private string searchTerm = "";
+    private bool isFahrenheit = false;
+    private bool isLoading = false;
+    private string errorMessage = "";
+
+    private WeatherForecastApiResponse? forecast;
+
+    private readonly List<string> cities = new()
+    {
+        "Delhi", "Mumbai", "Bengaluru", "Hyderabad", "Chennai",
+        "Kolkata", "Pune", "Ahmedabad", "Jaipur", "Surat",
+        "Lucknow", "Bhopal", "Visakhapatnam", "Chandigarh", "Coimbatore",
+        "Nagpur", "Patna", "Indore", "Thiruvananthapuram", "Madurai"
+    };
+
+    private IEnumerable<string> FilteredCities =>
+        string.IsNullOrWhiteSpace(searchTerm)
+            ? cities
+            : cities.Where(c => c.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+
+    private async Task OnCitySelected(ChangeEventArgs e)
+    {
+        selectedCity = e.Value?.ToString();
+        if (!string.IsNullOrWhiteSpace(selectedCity))
+        {
+            await LoadForecastAsync();
+        }
+    }
+
+    private async Task LoadForecastAsync()
+    {
+        isLoading = true;
+        errorMessage = "";
+        forecast = null;
+
+        var apiKey = "a239da81dc2a4cceb05154414251304";
+        var url = $"https://api.weatherapi.com/v1/forecast.json?key={apiKey}&q={selectedCity}&days=7&aqi=no&alerts=no";
+
+        try
+        {
+            using var client = new HttpClient();
+            var response = await client.GetAsync(url);
+
+            if (response.IsSuccessStatusCode)
+            {
+                forecast = await response.Content.ReadFromJsonAsync<WeatherForecastApiResponse>();
+                if (forecast == null)
+                    errorMessage = "Unable to parse weather data.";
+            }
+            else
+            {
+                errorMessage = $"Error: {response.ReasonPhrase}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Exception: {ex.Message}";
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+}

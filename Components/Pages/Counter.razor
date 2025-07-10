@@ -1,0 +1,105 @@
+@page "/counter"
+@using Microsoft.Maui.Networking
+@using Microsoft.Maui.ApplicationModel
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card shadow-lg border-0 p-4">
+                <h3 class="mb-4 text-center">App Tools & Utilities</h3>
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Counter</label>
+                    <div class="input-group mb-2">
+                        <input class="form-control text-center" value="@currentCount" readonly style="max-width: 80px;" />
+                        <button class="btn btn-primary" @onclick="IncrementCount">+1</button>
+                        <button class="btn btn-outline-secondary" @onclick="ResetCount">Reset</button>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Network</label>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-success" @onclick="InternetCheck">Check Internet</button>
+                        <button class="btn btn-outline-info" @onclick="ShowDeviceInfo">Show Device Info</button>
+                        <button class="btn btn-outline-warning" @onclick="OpenAppSettings">Open App Settings</button>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Other</label>
+                    <div>
+                        <button class="btn btn-outline-dark" @onclick="ShowToast">Show Toast</button>
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(ResultMessage))
+                {
+                    <div class="alert alert-info mt-3" role="alert">
+                        @((MarkupString)ResultMessage)
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(ToastMessage))
+    {
+        <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000;">
+            <div class="toast show align-items-center text-white bg-success border-0" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">@ToastMessage</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" @onclick="HideToast"></button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private int currentCount = 0;
+    private string ResultMessage = string.Empty;
+    private string ToastMessage = string.Empty;
+
+    private void IncrementCount()
+    {
+        currentCount++;
+    }
+    private void ResetCount()
+    {
+        currentCount = 0;
+        ResultMessage = string.Empty;
+    }
+
+    private async Task InternetCheck()
+    {
+        var hasInternet = Connectivity.Current.NetworkAccess == NetworkAccess.Internet;
+        var networkType = Connectivity.Current.ConnectionProfiles.FirstOrDefault();
+        ResultMessage = $"Internet: <b>{(hasInternet ? "Available" : "Not Available")}</b><br/>Type: <b>{networkType}</b>";
+    }
+
+    private void ShowDeviceInfo()
+    {
+        var model = DeviceInfo.Current.Model;
+        var manufacturer = DeviceInfo.Current.Manufacturer;
+        var version = DeviceInfo.Current.VersionString;
+        var platform = DeviceInfo.Current.Platform;
+        ResultMessage = $"Device: <b>{manufacturer} {model}</b><br/>Platform: <b>{platform}</b><br/>OS Version: <b>{version}</b>";
+    }
+
+    private void OpenAppSettings()
+    {
+        AppInfo.ShowSettingsUI();
+        ResultMessage = "Opened app settings.";
+    }
+
+    private async Task ShowToast()
+    {
+        ToastMessage = "This is a toast message!";
+        StateHasChanged();
+        await Task.Delay(2000);
+        HideToast();
+    }
+
+    private void HideToast()
+    {
+        ToastMessage = string.Empty;
+        StateHasChanged();
+    }
+}
