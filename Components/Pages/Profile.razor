@@ -1,39 +1,77 @@
 @page "/profile"
-@using Microsoft.Maui.Storage
+@using BlazorMauiApp1.Services
+@using BlazorMauiApp1.Models
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
 
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-12 col-md-7 col-lg-5">
             <div class="card shadow-lg border-0 p-4">
-                <div class="d-flex flex-column align-items-center mb-4">
-                    <img src="https://ui-avatars.com/api/?name=@(UserName ?? "User")&background=0D8ABC&color=fff&size=128"
-                        class="rounded-circle shadow mb-3" style="width: 96px; height: 96px; object-fit: cover;"
-                        alt="avatar" />
-                    <button class="btn btn-outline-secondary btn-sm mb-2" disabled>Change Avatar</button>
-                </div>
-                <form @onsubmit="SaveProfile">
-                    <div class="mb-3">
-                        <label class="form-label">Username</label>
-                        <div class="input-group">
-                            <input class="form-control" @bind="UserName" placeholder="Enter username" maxlength="32"
-                                required />
-                            <button type="button" class="btn btn-outline-primary"
-                                @onclick="() => EditField(nameof(UserName))">Edit</button>
+                @if (isLoading)
+                {
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Loading profile...</p>
+                    </div>
+                }
+                else if (userDetails != null)
+                {
+                    <div class="d-flex flex-column align-items-center mb-4">
+                        <img src="@(string.IsNullOrEmpty(userDetails.AvatarUrl) ? $"https://ui-avatars.com/api/?name={userDetails.Name}&background=0D8ABC&color=fff&size=128" : userDetails.AvatarUrl)"
+                            class="rounded-circle shadow mb-3" style="width: 96px; height: 96px; object-fit: cover;"
+                            alt="avatar" />
+                        <h4 class="mb-1">@userDetails.Name</h4>
+                        <p class="text-muted mb-0">@userDetails.Email</p>
+                        @if (userDetails.EmailVerified)
+                        {
+                            <span class="badge bg-success mt-2">
+                                <i class="bi bi-check-circle-fill me-1"></i>Email Verified
+                            </span>
+                        }
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted">First Name</label>
+                            <p class="fw-semibold">@(userDetails.GivenName ?? "Not provided")</p>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted">Last Name</label>
+                            <p class="fw-semibold">@(userDetails.FamilyName ?? "Not provided")</p>
                         </div>
                     </div>
+
                     <div class="mb-3">
-                        <label class="form-label">Email</label>
-                        <div class="input-group">
-                            <input class="form-control" @bind="Email" placeholder="Enter email" maxlength="64"
-                                type="email" required />
-                            <button type="button" class="btn btn-outline-primary"
-                                @onclick="() => EditField(nameof(Email))">Edit</button>
-                        </div>
+                        <label class="form-label text-muted">Account Created</label>
+                        <p class="fw-semibold">@userDetails.CreatedAt.ToString("MMMM dd, yyyy")</p>
                     </div>
-                    <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-success">Save Profile</button>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Last Sign In</label>
+                        <p class="fw-semibold">@userDetails.LastSignInAt.ToString("MMMM dd, yyyy 'at' h:mm tt")</p>
                     </div>
-                </form>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button class="btn btn-outline-primary" @onclick="RefreshProfile">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Refresh Profile
+                        </button>
+                        <button class="btn btn-outline-danger" @onclick="SignOut">
+                            <i class="bi bi-box-arrow-right me-2"></i>Sign Out
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4">
+                        <i class="bi bi-person-x display-1 text-muted mb-3"></i>
+                        <h4>Not Signed In</h4>
+                        <p class="text-muted">Please sign in to view your profile.</p>
+                        <a class="btn btn-primary" href="/login">Go to Login</a>
+                    </div>
+                }
             </div>
         </div>
     </div>
@@ -52,45 +90,109 @@
 </div>
 
 @code {
-    private string? UserName { get; set; } = string.Empty;
-    private string? Email { get; set; } = string.Empty;
+    private UserDetails? userDetails;
+    private bool isLoading = true;
     private string ToastMessage = string.Empty;
     private string ToastBgClass = "bg-success";
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        // Load from app storage
-        UserName = Preferences.Get("profile_username", "User");
-        Email = Preferences.Get("profile_email", "user@email.com");
+        await LoadUserDetails();
+
+        // Subscribe to user changes
+        AuthService.OnUserChanged += OnUserChanged;
     }
 
-    private void EditField(string field)
-    {
-        // Optionally focus the field or show a dialog; here, fields are always editable
-    }
-
-    private async Task SaveProfile()
+    private async Task LoadUserDetails()
     {
         try
         {
-            Preferences.Set("profile_username", UserName ?? "User");
-            Preferences.Set("profile_email", Email ?? "user@email.com");
-            ToastBgClass = "bg-success";
-            ToastMessage = "Profile saved successfully!";
+            isLoading = true;
+            StateHasChanged();
+
+            userDetails = await AuthService.GetUserDetailsAsync();
+
+            if (userDetails == null)
+            {
+                // Check if user is authenticated
+                var isAuthenticated = await AuthService.IsAuthenticatedAsync();
+                if (!isAuthenticated)
+                {
+                    // Redirect to login if not authenticated
+                    Navigation.NavigateTo("/login");
+                    return;
+                }
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            ToastBgClass = "bg-danger";
-            ToastMessage = "Failed to save profile.";
+            ShowToast("Error", $"Failed to load profile: {ex.Message}", "error");
         }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshProfile()
+    {
+        await LoadUserDetails();
+        ShowToast("Success", "Profile refreshed successfully!", "success");
+    }
+
+    private async Task SignOut()
+    {
+        try
+        {
+            await AuthService.SignOutAsync();
+            userDetails = null;
+            ShowToast("Success", "Signed out successfully!", "success");
+
+            // Redirect to home page
+            Navigation.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            ShowToast("Error", $"Failed to sign out: {ex.Message}", "error");
+        }
+    }
+
+    private void OnUserChanged(UserDetails? user)
+    {
+        userDetails = user;
         StateHasChanged();
-        await Task.Delay(2000);
-        HideToast();
+    }
+
+    private void ShowToast(string title, string message, string type = "info")
+    {
+        ToastBgClass = type switch
+        {
+            "error" => "bg-danger",
+            "success" => "bg-success",
+            "warning" => "bg-warning",
+            _ => "bg-info"
+        };
+        ToastMessage = message;
+        StateHasChanged();
+
+        Task.Delay(3000).ContinueWith(_ =>
+        {
+            MainThread.InvokeOnMainThreadAsync(() =>
+    {
+            HideToast();
+        });
+        });
     }
 
     private void HideToast()
     {
         ToastMessage = string.Empty;
         StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        AuthService.OnUserChanged -= OnUserChanged;
     }
 }

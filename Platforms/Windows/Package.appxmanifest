@@ -41,6 +41,15 @@
 
   <Capabilities>
     <rescap:Capability Name="runFullTrust" />
+    <uap:Capability Name="internetClient" />
   </Capabilities>
+
+  <Extensions>
+    <uap:Extension Category="windows.protocol">
+      <uap:Protocol Name="com.companyname.blazormauiapp1">
+        <uap:DisplayName>BlazorMauiApp1</uap:DisplayName>
+      </uap:Protocol>
+    </uap:Extension>
+  </Extensions>
 
 </Package>

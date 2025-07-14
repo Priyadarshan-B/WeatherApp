@@ -46,13 +46,7 @@
             </BlazorWebView>
         </Grid>
     </ContentPage>
-    <ContentPage Title="Internal Songs" IconImageSource="songs-icon.svg">
-        <BlazorWebView  HostPage="wwwroot/index.html">
-            <BlazorWebView.RootComponents>
-                <RootComponent Selector="#app" ComponentType="{x:Type pages:InternalSongsPage}" />
-            </BlazorWebView.RootComponents>
-        </BlazorWebView>
-    </ContentPage>
+    
     <ContentPage Title="Profile" IconImageSource="profile-icon.svg">
         <BlazorWebView  HostPage="wwwroot/index.html">
             <BlazorWebView.RootComponents>

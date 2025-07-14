@@ -43,7 +43,7 @@ public class AudioFileService : IAudioFileService
 
             System.Diagnostics.Debug.WriteLine($"🔍 Querying with selection: {selection}");
 
-            using (var cursor = context.ContentResolver.Query(audioUri, projection, selection, null, sortOrder))
+            using (var cursor = context.ContentResolver != null ? context.ContentResolver.Query(audioUri, projection, selection, null, sortOrder) : null)
             {
                 System.Diagnostics.Debug.WriteLine($"📊 Cursor is null: {cursor == null}");
 
@@ -137,18 +137,21 @@ public class AudioFileService : IAudioFileService
             // Test if the URI is accessible
             try
             {
-                using var inputStream = context.ContentResolver.OpenInputStream(albumArtUri);
-                if (inputStream != null)
+                if (context.ContentResolver != null)
                 {
-                    inputStream.Close();
-                    System.Diagnostics.Debug.WriteLine($"✅ Album art found for song ID: {songId}");
-                    return albumArtUri.ToString();
+                    using var inputStream = context.ContentResolver.OpenInputStream(albumArtUri);
+                    if (inputStream != null)
+                    {
+                        inputStream.Close();
+                        System.Diagnostics.Debug.WriteLine($"\u2705 Album art found for song ID: {songId}");
+                        return albumArtUri.ToString();
+                    }
                 }
             }
             catch
             {
                 // Album art doesn't exist, return empty
-                System.Diagnostics.Debug.WriteLine($"❌ No album art for song ID: {songId}");
+                System.Diagnostics.Debug.WriteLine($"\u274c No album art for song ID: {songId}");
             }
         }
         catch (System.Exception ex)

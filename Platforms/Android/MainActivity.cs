@@ -17,9 +17,9 @@ namespace BlazorMauiApp1
 
         private void RequestPermissions()
         {
+#pragma warning disable CA1416 
             if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu)
             {
-                // Android 13+ uses READ_MEDIA_AUDIO
                 if (ContextCompat.CheckSelfPermission(this, Android.Manifest.Permission.ReadMediaAudio) != Permission.Granted)
                 {
                     ActivityCompat.RequestPermissions(this, new string[] { Android.Manifest.Permission.ReadMediaAudio }, 100);
@@ -27,12 +27,12 @@ namespace BlazorMauiApp1
             }
             else
             {
-                // Android 12 and below uses READ_EXTERNAL_STORAGE
                 if (ContextCompat.CheckSelfPermission(this, Android.Manifest.Permission.ReadExternalStorage) != Permission.Granted)
                 {
                     ActivityCompat.RequestPermissions(this, new string[] { Android.Manifest.Permission.ReadExternalStorage }, 101);
                 }
             }
+#pragma warning restore CA1416
         }
     }
 }

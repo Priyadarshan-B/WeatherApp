@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using System.Net.Http;
 using CommunityToolkit.Maui;
+using BlazorMauiApp1.Services;
 
 
 
@@ -37,6 +38,9 @@ namespace BlazorMauiApp1
             builder.Services.AddSingleton<IAudioFileService, AudioFileService>();
 #endif
 
+            // Register authentication service
+            builder.Services.AddSingleton<IAuthService, AuthService>();
+            builder.Services.AddSingleton<App>();
 
 
             return builder.Build();
