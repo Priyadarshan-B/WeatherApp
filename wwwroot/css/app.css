@@ -180,7 +180,6 @@ body.dark .toast {
 .music-visualizer {
     position: relative;
     height: 40px;
-    background: rgba(0, 0, 0, 0.05);
     border-radius: 20px;
     overflow: hidden;
     cursor: pointer;
@@ -194,50 +193,97 @@ body.dark .toast {
     right: 0;
     bottom: 0;
     display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
+    align-items: center;
+    justify-content: center;
     padding: 8px 12px;
-    gap: 2px;
 }
 
 .visualizer-bar {
-    flex: 1;
-    background: linear-gradient(180deg, #007bff 0%, #0056b3 100%);
-    border-radius: 2px;
-    min-height: 4px;
-    max-height: 24px;
-    transition: height 0.1s ease;
-    animation: visualizerPulse 1.5s ease-in-out infinite;
+    width: 100%;
+    height: 6px;
+    background: #007bff;
+    border-radius: 3px;
+    position: relative;
+    overflow: hidden;
+    animation: samsungWave 2s ease-in-out infinite;
 }
 
-.visualizer-bar:nth-child(odd) {
-    animation-delay: 0.1s;
+.visualizer-bar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(255, 255, 255, 0.3) 20%, 
+        rgba(255, 255, 255, 0.6) 50%, 
+        rgba(255, 255, 255, 0.3) 80%, 
+        transparent 100%);
+    animation: waveFlow 3s ease-in-out infinite;
+    border-radius: 3px;
 }
 
-.visualizer-bar:nth-child(even) {
-    animation-delay: 0.3s;
+.visualizer-bar::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 0;
+    right: 0;
+    bottom: -2px;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(0, 123, 255, 0.2) 25%, 
+        rgba(0, 123, 255, 0.4) 50%, 
+        rgba(0, 123, 255, 0.2) 75%, 
+        transparent 100%);
+    animation: waveGlow 2.5s ease-in-out infinite;
+    border-radius: 3px;
+    filter: blur(1px);
 }
 
-.visualizer-bar:nth-child(3n) {
-    animation-delay: 0.5s;
-}
-
-.visualizer-bar:nth-child(4n) {
-    animation-delay: 0.7s;
-}
-
-.visualizer-bar:nth-child(5n) {
-    animation-delay: 0.9s;
-}
-
-@keyframes visualizerPulse {
+@keyframes samsungWave {
     0%, 100% {
-        height: 4px;
-        opacity: 0.6;
+        transform: scaleY(0.8);
+        opacity: 0.8;
+    }
+    25% {
+        transform: scaleY(1.2);
+        opacity: 1;
     }
     50% {
-        height: 24px;
+        transform: scaleY(1.5);
         opacity: 1;
+    }
+    75% {
+        transform: scaleY(1.1);
+        opacity: 0.9;
+    }
+}
+
+@keyframes waveFlow {
+    0% {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+@keyframes waveGlow {
+    0%, 100% {
+        opacity: 0.3;
+        transform: scaleY(0.8);
+    }
+    50% {
+        opacity: 0.6;
+        transform: scaleY(1.2);
     }
 }
 
@@ -246,7 +292,7 @@ body.dark .toast {
     top: 0;
     left: 0;
     height: 100%;
-    background: linear-gradient(90deg, rgba(0, 123, 255, 0.3) 0%, rgba(0, 123, 255, 0.1) 100%);
+    background: linear-gradient(90deg, rgba(0, 123, 255, 0.2) 0%, rgba(0, 123, 255, 0.1) 100%);
     border-radius: 20px;
     pointer-events: none;
     transition: width 0.1s ease;
@@ -273,49 +319,62 @@ body.dark .toast {
 
 /* Enhanced visualizer for playing state */
 .music-visualizer.playing .visualizer-bar {
-    animation-duration: 0.8s;
+    animation-duration: 1.5s;
+    background: #28a745;
 }
 
-.music-visualizer.playing .visualizer-bar:nth-child(odd) {
-    background: linear-gradient(180deg, #28a745 0%, #1e7e34 100%);
+.music-visualizer.playing .visualizer-bar::before {
+    animation-duration: 2.5s;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(255, 255, 255, 0.4) 20%, 
+        rgba(255, 255, 255, 0.8) 50%, 
+        rgba(255, 255, 255, 0.4) 80%, 
+        transparent 100%);
 }
 
-.music-visualizer.playing .visualizer-bar:nth-child(even) {
-    background: linear-gradient(180deg, #007bff 0%, #0056b3 100%);
-}
-
-.music-visualizer.playing .visualizer-bar:nth-child(3n) {
-    background: linear-gradient(180deg, #ffc107 0%, #e0a800 100%);
-}
-
-.music-visualizer.playing .visualizer-bar:nth-child(4n) {
-    background: linear-gradient(180deg, #dc3545 0%, #c82333 100%);
-}
-
-.music-visualizer.playing .visualizer-bar:nth-child(5n) {
-    background: linear-gradient(180deg, #6f42c1 0%, #5a2d91 100%);
+.music-visualizer.playing .visualizer-bar::after {
+    animation-duration: 2s;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(40, 167, 69, 0.3) 25%, 
+        rgba(40, 167, 69, 0.5) 50%, 
+        rgba(40, 167, 69, 0.3) 75%, 
+        transparent 100%);
 }
 
 /* Responsive visualizer */
 @media (max-width: 576px) {
-    .visualizer-bars {
-        gap: 1px;
-        padding: 6px 8px;
+    .music-visualizer {
+        height: 32px;
     }
     
     .visualizer-bar {
-        min-height: 3px;
-        max-height: 18px;
+        height: 4px;
+        border-radius: 2px;
     }
     
-    @keyframes visualizerPulse {
+    .visualizer-bar::before,
+    .visualizer-bar::after {
+        border-radius: 2px;
+    }
+    
+    @keyframes samsungWave {
         0%, 100% {
-            height: 3px;
-            opacity: 0.6;
+            transform: scaleY(0.8);
+            opacity: 0.8;
+        }
+        25% {
+            transform: scaleY(1.1);
+            opacity: 1;
         }
         50% {
-            height: 18px;
+            transform: scaleY(1.3);
             opacity: 1;
+        }
+        75% {
+            transform: scaleY(1.0);
+            opacity: 0.9;
         }
     }
 }

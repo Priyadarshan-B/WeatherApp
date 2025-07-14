@@ -36,7 +36,7 @@
             {
                 <div class="col">
                     <div class="card h-100 shadow-sm border-0
-                        @(CurrentSong == song ? "border-primary border-2 bg-primary bg-opacity-10 shadow" : "")"
+                                                                @(CurrentSong == song ? "border-primary border-2 bg-primary bg-opacity-10 shadow" : "")"
                         style="cursor:pointer" @onclick="() => PlaySong(song)">
                         <img src="/music-icon.svg" class="card-img-top object-fit-cover album-art" alt="music icon"
                             style="height: 150px;" />
@@ -62,45 +62,51 @@
 
 @if (CurrentSong != null)
 {
-    <div class="music-controls fixed-bottom bg-light border-top shadow-lg px-2 py-2" style="z-index: 1050;">
-        <div class="container">
-            <div class="d-flex align-items-center justify-content-between">
-                <img src="/music-icon.svg" class="rounded shadow-sm me-2" alt="music icon"
-                    style="width: 44px; height: 44px; object-fit: cover;" />
-                <div class="flex-grow-1 me-2 min-width-0">
-                    <div class="fw-semibold text-truncate song-title-scroll">@CurrentSong.Title</div>
-                    <div class="text-muted small text-truncate artist-name-scroll">@CurrentSong.Artist</div>
-                    <div class="music-visualizer @(isPlaying ? "playing" : "")" @onclick="OnVisualizerClick" @onmousedown="() => isSeeking = true" @onmouseup="() => isSeeking = false" @ref="visualizerElement">
-                        <div class="visualizer-bars">
-                            @for (int i = 0; i < 20; i++)
-                            {
-                                <div class="visualizer-bar"></div>
-                            }
-                        </div>
-                        <div class="visualizer-progress" style="width: @(duration > 0 ? (progress / duration * 100) : 0)%"></div>
-                        <div class="visualizer-handle" style="left: @(duration > 0 ? (progress / duration * 100) : 0)%"></div>
-                    </div>
-                    <div class="d-flex justify-content-between small">
-                        <span>@FormatTime(progress)</span>
-                        <span>@FormatTime(duration)</span>
-                    </div>
+    <div class="music-controls fixed-bottom border-top shadow-lg" style="z-index: 1050; background-color: #d0d3d5;">
+        <div class="container px-3 py-3">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <img src="/music-icon.svg" class="rounded shadow-sm me-3" alt="music icon"
+                    style="width: 48px; height: 48px; object-fit: cover;" />
+                <div class="flex-grow-1 min-width-0">
+                    <div class="fw-semibold text-truncate song-title-scroll fs-6">@CurrentSong.Title</div>
+                    <div class="text-muted small text-truncate artist-name-scroll" style="color:white">@CurrentSong.Artist</div>
                 </div>
-                <div class="d-flex align-items-center gap-2 ms-2 flex-shrink-0">
-                    <button
-                        class="btn btn-outline-primary rounded-circle p-0 d-flex align-items-center justify-content-center"
-                        style="width:36px;height:36px;" @onclick="PrevSong" title="Previous">
-                        <i class="bi bi-skip-backward-fill fs-5"></i>
-                    </button>
-                    <button class="btn btn-primary rounded-circle p-0 d-flex align-items-center justify-content-center"
-                        style="width:44px;height:44px;" @onclick="TogglePlayPause" title="Play/Pause">
-                        <i class="bi @(isPlaying ? "bi-pause-fill" : "bi-play-fill") fs-4"></i>
-                    </button>
-                    <button
-                        class="btn btn-outline-primary rounded-circle p-0 d-flex align-items-center justify-content-center"
-                        style="width:36px;height:36px;" @onclick="NextSong" title="Next">
-                        <i class="bi bi-skip-forward-fill fs-5"></i>
-                    </button>
+            </div>
+
+            <div class="music-visualizer @(isPlaying ? "playing" : "") mb-2" @onclick="OnVisualizerClick"
+                @onmousedown="() => isSeeking = true" @onmouseup="() => isSeeking = false" @ref="visualizerElement"
+                style="background-color: #e0e0e0; border-radius: 8px; height: 8px; position: relative; cursor: pointer;">
+                <div class="visualizer-bars">
+                    <div class="visualizer-bar"></div>
                 </div>
+                <div class="visualizer-progress"
+                    style="width: @(duration > 0 ? (progress / duration * 100) : 0)%; background-color: #666666; border-radius: 8px; height: 100%; position: absolute; top: 0; left: 0;">
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex justify-content-between small text-muted mb-2" style="width: 100%;">
+                    <span>@FormatTime(progress)</span>
+                    <span>@FormatTime(duration)</span>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-center gap-4">
+                <button class="btn rounded-circle p-0 d-flex align-items-center justify-content-center shadow-sm"
+                    style="width:40px;height:40px; background-color: #000000; border: none; color: white;"
+                    @onclick="PrevSong" title="Previous">
+                    <i class="bi bi-skip-backward-fill fs-6"></i>
+                </button>
+                <button class="btn rounded-circle p-0 d-flex align-items-center justify-content-center shadow-sm"
+                    style="width:52px;height:52px; background-color: #000000; border: none; color: white;"
+                    @onclick="TogglePlayPause" title="Play/Pause">
+                    <i class="bi @(isPlaying ? "bi-pause-fill" : "bi-play-fill") fs-5"></i>
+                </button>
+                <button class="btn rounded-circle p-0 d-flex align-items-center justify-content-center shadow-sm"
+                    style="width:40px;height:40px; background-color: #000; border: none; color: white;"
+                    @onclick="NextSong" title="Next">
+                    <i class="bi bi-skip-forward-fill fs-6"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -128,9 +134,9 @@
     private List<Song> Songs = new();
     private List<Song> AllSongs = new();
     private List<Song> FilteredSongs => string.IsNullOrWhiteSpace(searchTerm)
-        ? Songs
-        : AllSongs.Where(s => (s.Title?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
-            || (s.Artist?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)).ToList();
+    ? Songs
+    : AllSongs.Where(s => (s.Title?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+    || (s.Artist?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)).ToList();
     private Song? CurrentSong;
     private int currentIndex = -1;
     private bool isPlaying = true;
@@ -168,61 +174,61 @@
                     Console.WriteLine($"📁 Found {audioFiles.Count} audio files from device");
 
                     var processedSongs = audioFiles.Select(songData =>
+        {
+                try
+                {
+                    using var document = JsonDocument.Parse(songData);
+                    var root = document.RootElement;
+
+                    if (root.TryGetProperty("FilePath", out var filePathElement))
                     {
-                        try
-                        {
-                            using var document = JsonDocument.Parse(songData);
-                            var root = document.RootElement;
+                        var filePath = filePathElement.GetString();
+                        var title = root.TryGetProperty("Title", out var titleElement) ? titleElement.GetString() : "Unknown Title";
+                        var artist = root.TryGetProperty("Artist", out var artistElement) ? artistElement.GetString() : "Unknown Artist";
+                        var album = root.TryGetProperty("Album", out var albumElement) ? albumElement.GetString() : "Unknown Album";
 
-                            if (root.TryGetProperty("FilePath", out var filePathElement))
-                            {
-                                var filePath = filePathElement.GetString();
-                                var title = root.TryGetProperty("Title", out var titleElement) ? titleElement.GetString() : "Unknown Title";
-                                var artist = root.TryGetProperty("Artist", out var artistElement) ? artistElement.GetString() : "Unknown Artist";
-                                var album = root.TryGetProperty("Album", out var albumElement) ? albumElement.GetString() : "Unknown Album";
+                        Console.WriteLine($"🎵 Parsed JSON - Title: {title}, Artist: {artist}, Album: {album}");
+                        Console.WriteLine($"🎵 File Path: {filePath}");
 
-                                Console.WriteLine($"🎵 Parsed JSON - Title: {title}, Artist: {artist}, Album: {album}");
-                                Console.WriteLine($"🎵 File Path: {filePath}");
-
-                                var cleanTitle = CleanTitle(title);
-                                var cleanArtist = CleanArtist(artist);
-
-                                return new Song
-                                {
-                                    Title = cleanTitle ?? "Unknown Title",
-                                    Artist = cleanArtist ?? "Unknown Artist",
-                                    AudioUrl = filePath,
-                                    ThumbnailUrl = "/wwwroot/music-icon.svg"
-                                };
-                            }
-
-                            return null;
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"❌ JSON parsing error: {ex.Message}");
-                            Console.WriteLine($"❌ Raw data: {songData}");
-                        }
+                        var cleanTitle = CleanTitle(title);
+                        var cleanArtist = CleanArtist(artist);
 
                         return new Song
                         {
-                            Title = System.IO.Path.GetFileNameWithoutExtension(songData),
-                            Artist = "Unknown Artist",
-                            AudioUrl = songData,
+                            Title = cleanTitle ?? "Unknown Title",
+                            Artist = cleanArtist ?? "Unknown Artist",
+                            AudioUrl = filePath,
                             ThumbnailUrl = "/wwwroot/music-icon.svg"
                         };
-                    })
-                    .Where(song => song != null)
-                    .Cast<Song>()
-                    .ToList();
+                    }
+
+                    return null;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ JSON parsing error: {ex.Message}");
+                    Console.WriteLine($"❌ Raw data: {songData}");
+                }
+
+                return new Song
+                {
+                    Title = System.IO.Path.GetFileNameWithoutExtension(songData),
+                    Artist = "Unknown Artist",
+                    AudioUrl = songData,
+                    ThumbnailUrl = "/wwwroot/music-icon.svg"
+                };
+            })
+        .Where(song => song != null)
+        .Cast<Song>()
+        .ToList();
 
                     await MainThread.InvokeOnMainThreadAsync(() =>
-                    {
-                        AllSongs = processedSongs;
-                        Songs = processedSongs.Take(displayedSongsCount).ToList();
-                        Console.WriteLine($"🎵 Created {Songs.Count} Song objects (showing first {displayedSongsCount})");
-                        ShowToast("Songs Loaded", $"Successfully loaded {processedSongs.Count} songs from your device.", "success");
-                    });
+        {
+                AllSongs = processedSongs;
+                Songs = processedSongs.Take(displayedSongsCount).ToList();
+                Console.WriteLine($"🎵 Created {Songs.Count} Song objects (showing first {displayedSongsCount})");
+                ShowToast("Songs Loaded", $"Successfully loaded {processedSongs.Count} songs from your device.", "success");
+            });
                 }
                 else
                 {
@@ -238,12 +244,12 @@
                     var jsonSongs = JsonSerializer.Deserialize<List<Song>>(json) ?? new();
 
                     await MainThread.InvokeOnMainThreadAsync(() =>
-                    {
-                        AllSongs = jsonSongs;
-                        Songs = jsonSongs.Take(displayedSongsCount).ToList();
-                        Console.WriteLine($"📄 Loaded {Songs.Count} songs from JSON");
-                        ShowToast("Songs Loaded", $"Loaded {jsonSongs.Count} songs from backup file.", "info");
-                    });
+        {
+                AllSongs = jsonSongs;
+                Songs = jsonSongs.Take(displayedSongsCount).ToList();
+                Console.WriteLine($"📄 Loaded {Songs.Count} songs from JSON");
+                ShowToast("Songs Loaded", $"Loaded {jsonSongs.Count} songs from backup file.", "info");
+            });
                 }
             });
         }
@@ -375,14 +381,14 @@ uri = new Uri($"file://{localPath}");
     private async void OnVisualizerClick(MouseEventArgs e)
     {
         if (MainPage.MediaPlayerInstance == null || duration <= 0) return;
-        
+
         try
         {
             var clickX = e.OffsetX;
             var totalWidth = await JS.InvokeAsync<double>("getElementWidth", visualizerElement);
             var percentage = Math.Max(0, Math.Min(1, clickX / totalWidth));
             var newTime = duration * percentage;
-            
+
             MainPage.MediaPlayerInstance.SeekTo(TimeSpan.FromSeconds(newTime));
             progress = newTime;
             isSeeking = false;
@@ -513,7 +519,8 @@ uri = new Uri($"file://{localPath}");
         displayedSongsCount += 100;
         Songs = AllSongs.Take(displayedSongsCount).ToList();
         StateHasChanged();
-        ShowToast("Songs Loaded", $"Now showing {Math.Min(displayedSongsCount, AllSongs.Count)} of {AllSongs.Count} songs.", "info");
+        ShowToast("Songs Loaded", $"Now showing {Math.Min(displayedSongsCount, AllSongs.Count)} of {AllSongs.Count} songs.",
+        "info");
     }
 
     private void ShowToast(string title, string message, string type = "info")
@@ -524,9 +531,9 @@ uri = new Uri($"file://{localPath}");
         Task.Delay(3000).ContinueWith(_ =>
         {
             MainThread.InvokeOnMainThreadAsync(() =>
-            {
-                RemoveToast(toastId);
-            });
+    {
+            RemoveToast(toastId);
+        });
         });
     }
 
