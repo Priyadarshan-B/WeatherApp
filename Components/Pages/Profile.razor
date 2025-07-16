@@ -3,6 +3,12 @@
 @using BlazorMauiApp1.Models
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
+@inject IMauiNavigationService MauiNavigation
+
+@using Microsoft.Maui.Controls
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.WebView.Maui
+
 
 <div class="container py-5">
     <div class="row justify-content-center">
@@ -69,7 +75,7 @@
                         <i class="bi bi-person-x display-1 text-muted mb-3"></i>
                         <h4>Not Signed In</h4>
                         <p class="text-muted">Please sign in to view your profile.</p>
-                        <a class="btn btn-primary" href="/login">Go to Login</a>
+                        <button class="btn btn-primary" @onclick="GoToLogin">Go to Login</button>
                     </div>
                 }
             </div>
@@ -114,12 +120,12 @@
 
             if (userDetails == null)
             {
-                // Check if user is authenticated
+
                 var isAuthenticated = await AuthService.IsAuthenticatedAsync();
                 if (!isAuthenticated)
                 {
-                    // Redirect to login if not authenticated
-                    Navigation.NavigateTo("/login");
+
+                    MauiNavigation.NavigateToBlazorMauiPage<BlazorMauiApp1.Components.Pages.LoginPage>();
                     return;
                 }
             }
@@ -149,13 +155,19 @@
             userDetails = null;
             ShowToast("Success", "Signed out successfully!", "success");
 
-            // Redirect to home page
-            Navigation.NavigateTo("/");
+            // Use the new service for navigation
+            MauiNavigation.NavigateToBlazorMauiPage<BlazorMauiApp1.Components.Pages.LoginPage>();
         }
         catch (Exception ex)
         {
             ShowToast("Error", $"Failed to sign out: {ex.Message}", "error");
         }
+    }
+
+    private void GoToLogin()
+    {
+        // Use the new service for navigation
+        MauiNavigation.NavigateToBlazorMauiPage<BlazorMauiApp1.Components.Pages.LoginPage>();
     }
 
     private void OnUserChanged(UserDetails? user)

@@ -23,6 +23,8 @@ namespace BlazorMauiApp1
                 });
 
             builder.Services.AddMauiBlazorWebView();
+            builder.Services.AddSingleton<IMauiNavigationService, MauiNavigationService>();
+
 
 #if DEBUG
     		builder.Services.AddBlazorWebViewDeveloperTools();

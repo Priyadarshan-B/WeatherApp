@@ -42,6 +42,19 @@
                             </button>
                         </div>
 
+                        <div class="d-grid mt-3">
+                            <button
+                                class="btn btn-outline-success btn-lg d-flex align-items-center justify-content-center gap-3"
+                                @onclick="SignInWithSupabaseGoogle" disabled="@isLoading">
+                                <svg width="20" height="20" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10" fill="#3ECF8E" />
+                                    <text x="12" y="16" text-anchor="middle" font-size="10" fill="#fff" font-family="Arial"
+                                        font-weight="bold">S</text>
+                                </svg>
+                                Sign in with Google (via Supabase)
+                            </button>
+                        </div>
+
                         <div class="text-center mt-4">
                             <small class="text-muted">
                                 By signing in, you agree to our Terms of Service and Privacy Policy
@@ -73,10 +86,10 @@
             var isAuthenticated = await AuthService.IsAuthenticatedAsync();
             if (isAuthenticated)
             {
-                // Already authenticated → go to MainPage
+
                 if (Application.Current != null)
                 {
-                    Application.Current.MainPage = new MainPage(); // ← this is your TabbedPage
+                    Application.Current.MainPage = new MainPage();
                 }
             }
         }
@@ -94,15 +107,48 @@
 
             if (success)
             {
-                // Switch to TabbedPage layout after login
+
                 if (Application.Current != null)
                 {
-                    Application.Current.MainPage = new MainPage(); // ← key line
+                    Application.Current.MainPage = new MainPage();
                 }
             }
             else
             {
                 errorMessage = "Failed to sign in with Google. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SignInWithSupabaseGoogle()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            StateHasChanged();
+
+            var success = AuthService != null && await AuthService.SignInWithSupabaseGoogleAsync();
+
+            if (success)
+            {
+                if (Application.Current != null)
+                {
+                    Application.Current.MainPage = new MainPage();
+                }
+            }
+            else
+            {
+                errorMessage = "Failed to sign in with Supabase Google. Please try again.";
             }
         }
         catch (Exception ex)

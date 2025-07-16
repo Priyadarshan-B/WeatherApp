@@ -92,6 +92,87 @@ namespace BlazorMauiApp1.Services
             return false;
         }
 
+        public async Task<bool> SignInWithSupabaseGoogleAsync()
+        {
+            try
+            {
+                var supabaseUrl = SupabaseConfig.SupabaseUrl;
+                var redirectUri = SupabaseConfig.RedirectUri;
+                var authUrl = $"{supabaseUrl}/auth/v1/authorize?provider=google&redirect_to={Uri.EscapeDataString(redirectUri)}";
+
+                var callbackUrl = new Uri(redirectUri);
+                var authResult = await WebAuthenticator.Default.AuthenticateAsync(new Uri(authUrl), callbackUrl);
+
+                // Debug: Log all properties returned from the callback
+                if (authResult?.Properties != null)
+                {
+                    foreach (var kvp in authResult.Properties)
+                    {
+                        Console.WriteLine($"AuthResult Property: {kvp.Key} = {kvp.Value}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("No properties returned from WebAuthenticator.");
+                }
+
+                // Supabase returns access_token and other info in the URL fragment or as query params
+                string? accessToken = null;
+                string? refreshToken = null;
+                string? providerToken = null;
+                if (authResult?.Properties != null)
+                {
+                    // Extract tokens from properties
+                    authResult.Properties.TryGetValue("access_token", out accessToken);
+                    authResult.Properties.TryGetValue("refresh_token", out refreshToken);
+                    authResult.Properties.TryGetValue("provider_token", out providerToken);
+
+                    // Optional: Log for debugging
+                    Console.WriteLine($"Supabase access_token: {accessToken}");
+                    Console.WriteLine($"Supabase refresh_token: {refreshToken}");
+                    Console.WriteLine($"Supabase provider_token: {providerToken}");
+                }
+
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    var userInfo = await GetSupabaseUserInfoAsync(accessToken);
+                    if (userInfo != null)
+                    {
+                        Console.WriteLine("Supabase user info successfully retrieved.");
+                        _currentUser = new UserDetails
+                        {
+                            Id = userInfo.Id,
+                            Email = userInfo.Email,
+                            Name = userInfo.UserMetadata?.Name ?? userInfo.Email,
+                            AvatarUrl = userInfo.UserMetadata?.AvatarUrl ?? string.Empty,
+                            GivenName = userInfo.UserMetadata?.GivenName ?? string.Empty,
+                            FamilyName = userInfo.UserMetadata?.FamilyName ?? string.Empty,
+                            Picture = userInfo.UserMetadata?.Picture ?? string.Empty,
+                            EmailVerified = userInfo.EmailConfirmed,
+                            CreatedAt = userInfo.CreatedAt,
+                            LastSignInAt = DateTime.UtcNow
+                        };
+                        OnUserChanged?.Invoke(_currentUser);
+                        await SaveUserDetailsAsync(_currentUser);
+                        return true;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Supabase user info is null. Failed to fetch user info with access token.");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Supabase access_token is null or empty.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during Supabase Google sign-in: {ex.Message}");
+            }
+            return false;
+        }
+
         public async Task SignOutAsync()
         {
             try
@@ -220,6 +301,31 @@ namespace BlazorMauiApp1.Services
             return null;
         }
 
+        private async Task<SupabaseUserInfo?> GetSupabaseUserInfoAsync(string accessToken)
+        {
+            try
+            {
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
+                client.DefaultRequestHeaders.Add("apikey", SupabaseConfig.SupabaseAnonKey); // <-- Add this line!
+
+                var supabaseUrl = SupabaseConfig.SupabaseUrl;
+                var response = await client.GetAsync($"{supabaseUrl}/auth/v1/user");
+                Console.WriteLine($"Supabase /auth/v1/user status: {response.StatusCode}");
+                var json = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Supabase /auth/v1/user response: {json}");
+                if (response.IsSuccessStatusCode)
+                {
+                    return JsonSerializer.Deserialize<SupabaseUserInfo>(json);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting Supabase user info: {ex.Message}");
+            }
+            return null;
+        }
+
         private async Task LoadUserFromStorageAsync()
         {
             try
@@ -276,5 +382,42 @@ namespace BlazorMauiApp1.Services
         
         [JsonPropertyName("verified_email")]
         public bool EmailVerified { get; set; }
+    }
+
+    // Add SupabaseUserInfo model for deserialization
+    public class SupabaseUserInfo
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("email")]
+        public string Email { get; set; } = string.Empty;
+
+        [JsonPropertyName("email_confirmed")]
+        public bool EmailConfirmed { get; set; }
+
+        [JsonPropertyName("created_at")]
+        public DateTime CreatedAt { get; set; }
+
+        [JsonPropertyName("user_metadata")]
+        public SupabaseUserMetadata? UserMetadata { get; set; }
+    }
+
+    public class SupabaseUserMetadata
+    {
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("avatar_url")]
+        public string? AvatarUrl { get; set; }
+
+        [JsonPropertyName("given_name")]
+        public string? GivenName { get; set; }
+
+        [JsonPropertyName("family_name")]
+        public string? FamilyName { get; set; }
+
+        [JsonPropertyName("picture")]
+        public string? Picture { get; set; }
     }
 }

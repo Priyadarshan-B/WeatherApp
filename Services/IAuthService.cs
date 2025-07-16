@@ -9,6 +9,7 @@ namespace BlazorMauiApp1.Services
         Task<bool> SignInWithGoogleAsync();
         Task SignOutAsync();
         Task<UserDetails?> GetUserDetailsAsync();
+        Task<bool> SignInWithSupabaseGoogleAsync();
         event Action<UserDetails?> OnUserChanged;
     }
 } 
