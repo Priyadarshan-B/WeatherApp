@@ -1,5 +1,7 @@
 @page "/"
 @using Microsoft.AspNetCore.Components
+@using BlazorMauiApp1.Services
+@inject IMauiNavigationService MauiNavigation
 
 <div class="container py-5">
     <div class="row justify-content-center g-4">
@@ -39,6 +41,22 @@
             <h2 class="fw-bold mb-3">Welcome to your Entertainment Hub</h2>
             <p class="lead text-muted">Get the latest weather updates and listen to your favorite music, all in one
                 place. Enjoy a seamless and beautiful experience!</p>
+
+            <!-- Test Deep Link Button -->
+            <div class="mt-4">
+                <button class="btn btn-warning" @onclick="TestDeepLink">
+                    Test Deep Link (Reset Password)
+                </button>
+            </div>
         </div>
     </div>
 </div>
+
+@code {
+    private void TestDeepLink()
+    {
+        System.Diagnostics.Debug.WriteLine("Home: TestDeepLink button clicked");
+        var testUri = new Uri("blazormauiapp1://reset-password?access_token=test123");
+        BlazorMauiApp1.Services.DeepLinkService.HandleDeepLink(testUri);
+    }
+}

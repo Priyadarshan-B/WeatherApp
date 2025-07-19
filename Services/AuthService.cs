@@ -173,6 +173,126 @@ namespace BlazorMauiApp1.Services
             return false;
         }
 
+        public async Task<bool> RegisterAsync(string email, string password)
+        {
+            try
+            {
+                var supabaseUrl = SupabaseConfig.SupabaseUrl;
+                var anonKey = SupabaseConfig.SupabaseAnonKey;
+                var payload = new { email, password };
+                var json = JsonSerializer.Serialize(payload);
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Add("apikey", anonKey);
+                var response = await client.PostAsync(
+                    $"{supabaseUrl}/auth/v1/signup",
+                    new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                );
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during registration: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> LoginAsync(string email, string password)
+        {
+            try
+            {
+                var supabaseUrl = SupabaseConfig.SupabaseUrl;
+                var anonKey = SupabaseConfig.SupabaseAnonKey;
+                var payload = new { email, password };
+                var json = JsonSerializer.Serialize(payload);
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Add("apikey", anonKey);
+                var response = await client.PostAsync(
+                    $"{supabaseUrl}/auth/v1/token?grant_type=password",
+                    new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                );
+                if (response.IsSuccessStatusCode)
+                {
+                    var respJson = await response.Content.ReadAsStringAsync();
+                    var tokenResp = JsonSerializer.Deserialize<TokenResponse>(respJson);
+                    if (tokenResp?.AccessToken != null)
+                    {
+                        var userInfo = await GetSupabaseUserInfoAsync(tokenResp.AccessToken);
+                        if (userInfo != null)
+                        {
+                            _currentUser = new UserDetails
+                            {
+                                Id = userInfo.Id,
+                                Email = userInfo.Email,
+                                Name = userInfo.UserMetadata?.Name ?? userInfo.Email,
+                                AvatarUrl = userInfo.UserMetadata?.AvatarUrl ?? string.Empty,
+                                GivenName = userInfo.UserMetadata?.GivenName ?? string.Empty,
+                                FamilyName = userInfo.UserMetadata?.FamilyName ?? string.Empty,
+                                Picture = userInfo.UserMetadata?.Picture ?? string.Empty,
+                                EmailVerified = userInfo.EmailConfirmed,
+                                CreatedAt = userInfo.CreatedAt,
+                                LastSignInAt = DateTime.UtcNow
+                            };
+                            OnUserChanged?.Invoke(_currentUser);
+                            await SaveUserDetailsAsync(_currentUser);
+                            return true;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during login: {ex.Message}");
+            }
+            return false;
+        }
+
+        public async Task<bool> SendPasswordResetEmailAsync(string email)
+        {
+            try
+            {
+                var supabaseUrl = SupabaseConfig.SupabaseUrl;
+                var anonKey = SupabaseConfig.SupabaseAnonKey;
+                var payload = new { email, redirect_to = "yourapp://reset-password" }; // Replace with your app's scheme
+                var json = JsonSerializer.Serialize(payload);
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Add("apikey", anonKey);
+                var response = await client.PostAsync(
+                    $"{supabaseUrl}/auth/v1/recover",
+                    new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                );
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending password reset email: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> ResetPasswordAsync(string accessToken, string newPassword)
+        {
+            try
+            {
+                var supabaseUrl = SupabaseConfig.SupabaseUrl;
+                var anonKey = SupabaseConfig.SupabaseAnonKey;
+                var payload = new { password = newPassword };
+                var json = JsonSerializer.Serialize(payload);
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Add("apikey", anonKey);
+                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
+                var response = await client.PutAsync(
+                    $"{supabaseUrl}/auth/v1/user",
+                    new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                );
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error resetting password: {ex.Message}");
+                return false;
+            }
+        }
+
         public async Task SignOutAsync()
         {
             try

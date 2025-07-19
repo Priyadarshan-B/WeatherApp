@@ -1,4 +1,6 @@
 ﻿@inherits LayoutComponentBase
+@using BlazorMauiApp1.Services
+@inject NavigationManager Navigation
 
 <div class="page">
     <div class="sidebar">
@@ -15,3 +17,14 @@
         </article>
     </main>
 </div>
+
+@code {
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && !string.IsNullOrEmpty(DeepLinkService.PendingResetToken))
+        {
+            Navigation.NavigateTo($"/reset-password?access_token={DeepLinkService.PendingResetToken}", forceLoad: true);
+            DeepLinkService.PendingResetToken = null;
+        }
+    }
+}

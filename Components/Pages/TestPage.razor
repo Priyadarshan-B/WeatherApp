@@ -1,0 +1,35 @@
+@page "/test"
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <h2 class="fw-bold text-primary mb-2">Test Page</h2>
+                        <p class="text-muted">This is a test page to verify navigation</p>
+                    </div>
+                    <div class="alert alert-success" role="alert">
+                        <strong>Success!</strong> The test page loaded successfully.
+                    </div>
+                    <div class="d-grid">
+                        <button class="btn btn-primary" @onclick="GoBack">Go Back</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        System.Diagnostics.Debug.WriteLine("TestPage: OnInitialized called");
+    }
+
+    private void GoBack()
+    {
+        // This will just show a message for now
+        System.Diagnostics.Debug.WriteLine("TestPage: Go Back button clicked");
+    }
+}

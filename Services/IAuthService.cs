@@ -11,5 +11,9 @@ namespace BlazorMauiApp1.Services
         Task<UserDetails?> GetUserDetailsAsync();
         Task<bool> SignInWithSupabaseGoogleAsync();
         event Action<UserDetails?> OnUserChanged;
+        Task<bool> RegisterAsync(string email, string password);
+        Task<bool> LoginAsync(string email, string password);
+        Task<bool> SendPasswordResetEmailAsync(string email);
+        Task<bool> ResetPasswordAsync(string accessToken, string newPassword);
     }
 } 

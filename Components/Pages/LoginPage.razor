@@ -2,6 +2,7 @@
 @using BlazorMauiApp1.Services
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
+@inject IMauiNavigationService MauiNavigation
 
 <div class="container py-5">
     <div class="row justify-content-center">
@@ -24,7 +25,25 @@
                     }
                     else
                     {
-                        <div class="d-grid">
+                        <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+                            <div class="mb-3">
+                                <InputText @bind-Value="loginModel.Email" class="form-control" placeholder="Email" />
+                            </div>
+                            <div class="mb-3">
+                                <InputText @bind-Value="loginModel.Password" class="form-control" type="password"
+                                    placeholder="Password" />
+                            </div>
+                            <div class="d-grid mb-2">
+                                <button class="btn btn-primary btn-lg" type="submit" disabled="@isLoading">Login</button>
+                            </div>
+                        </EditForm>
+                        <div class="d-flex justify-content-between mt-2">
+                            <a href="#" @onclick="GoToRegister">Register</a>
+                            <a href="#" @onclick="GoToForgotPassword">Forgot Password?</a>
+                        </div>
+                        <div class="d-grid mt-3">
                             <button
                                 class="btn btn-outline-primary btn-lg d-flex align-items-center justify-content-center gap-3"
                                 @onclick="SignInWithGoogle" disabled="@isLoading">
@@ -41,7 +60,6 @@
                                 Sign in with Google
                             </button>
                         </div>
-
                         <div class="d-grid mt-3">
                             <button
                                 class="btn btn-outline-success btn-lg d-flex align-items-center justify-content-center gap-3"
@@ -54,7 +72,6 @@
                                 Sign in with Google (via Supabase)
                             </button>
                         </div>
-
                         <div class="text-center mt-4">
                             <small class="text-muted">
                                 By signing in, you agree to our Terms of Service and Privacy Policy
@@ -78,6 +95,7 @@
 @code {
     private bool isLoading = false;
     private string errorMessage = string.Empty;
+    private LoginModel loginModel = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -87,10 +105,7 @@
             if (isAuthenticated)
             {
 
-                if (Application.Current != null)
-                {
-                    Application.Current.MainPage = new MainPage();
-                }
+                MauiNavigation.NavigateToBlazorMauiPage<BlazorMauiApp1.Components.Pages.Profile>();
             }
         }
     }
@@ -104,10 +119,8 @@
             StateHasChanged();
 
             var success = AuthService != null && await AuthService.SignInWithGoogleAsync();
-
             if (success)
             {
-
                 if (Application.Current != null)
                 {
                     Application.Current.MainPage = new MainPage();
@@ -160,5 +173,49 @@
             isLoading = false;
             StateHasChanged();
         }
+    }
+
+    private async Task HandleLogin()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            StateHasChanged();
+            var success = AuthService != null && await AuthService.LoginAsync(loginModel.Email, loginModel.Password);
+            if (success)
+            {
+                if (Application.Current != null)
+                {
+                    Application.Current.MainPage = new MainPage();
+                }
+            }
+            else
+            {
+                errorMessage = "Login failed. Please check your credentials.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    private void GoToRegister()
+    {
+        MauiNavigation.NavigateToBlazorMauiPage<BlazorMauiApp1.Components.Pages.RegisterPage>();
+    }
+    private void GoToForgotPassword()
+    {
+        MauiNavigation.NavigateToBlazorMauiPage<BlazorMauiApp1.Components.Pages.ForgotPasswordPage>();
+    }
+    public class LoginModel
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
     }
 }

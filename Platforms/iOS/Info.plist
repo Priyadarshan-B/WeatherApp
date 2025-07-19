@@ -35,7 +35,7 @@
             <string>com.companyname.blazormauiapp1</string>
             <key>CFBundleURLSchemes</key>
             <array>
-                <string>com.companyname.blazormauiapp1</string>
+                <string>blazormauiapp1</string>
             </array>
         </dict>
     </array>
