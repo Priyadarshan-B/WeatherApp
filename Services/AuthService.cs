@@ -3,17 +3,20 @@ using Microsoft.Maui.Authentication;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text.Json.Serialization;
 using System.Text.Json;
+using MongoDB.Driver;
 
 namespace BlazorMauiApp1.Services
 {
     public class AuthService : IAuthService
     {
         private UserDetails? _currentUser;
+        private readonly MongoUserService _mongoUserService;
 
         public event Action<UserDetails?> OnUserChanged = null!;
 
-        public AuthService()
+        public AuthService(MongoUserService mongoUserService)
         {
+            _mongoUserService = mongoUserService;
             LoadUserFromStorageAsync();
         }
 
@@ -79,6 +82,18 @@ namespace BlazorMauiApp1.Services
 
                             OnUserChanged?.Invoke(_currentUser);
                             await SaveUserDetailsAsync(_currentUser);
+
+                            // Upsert in MongoDB
+                            var mongoUser = new MongoUser
+                            {
+                                Email = userInfo.Email,
+                                Name = userInfo.Name,
+                                LastSignInAt = DateTime.UtcNow,
+                                CreatedAt = DateTime.UtcNow,
+                                Provider = "Google",
+                                AvatarUrl = userInfo.Picture
+                            };
+                            await _mongoUserService.UpsertUserAsync(mongoUser);
                             return true;
                         }
                     }
@@ -154,6 +169,18 @@ namespace BlazorMauiApp1.Services
                         };
                         OnUserChanged?.Invoke(_currentUser);
                         await SaveUserDetailsAsync(_currentUser);
+
+                        // Upsert in MongoDB
+                        var mongoUser = new MongoUser
+                        {
+                            Email = userInfo.Email,
+                            Name = userInfo.UserMetadata?.Name ?? userInfo.Email,
+                            LastSignInAt = DateTime.UtcNow,
+                            CreatedAt = userInfo.CreatedAt,
+                            Provider = "Supabase",
+                            AvatarUrl = userInfo.UserMetadata?.AvatarUrl
+                        };
+                        await _mongoUserService.UpsertUserAsync(mongoUser);
                         return true;
                     }
                     else
@@ -187,6 +214,19 @@ namespace BlazorMauiApp1.Services
                     $"{supabaseUrl}/auth/v1/signup",
                     new StringContent(json, System.Text.Encoding.UTF8, "application/json")
                 );
+                if (response.IsSuccessStatusCode)
+                {
+                    // Upsert in MongoDB
+                    var mongoUser = new MongoUser
+                    {
+                        Email = email,
+                        Name = email,
+                        LastSignInAt = DateTime.UtcNow,
+                        CreatedAt = DateTime.UtcNow,
+                        Provider = "Form"
+                    };
+                    await _mongoUserService.UpsertUserAsync(mongoUser);
+                }
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)
@@ -234,6 +274,18 @@ namespace BlazorMauiApp1.Services
                             };
                             OnUserChanged?.Invoke(_currentUser);
                             await SaveUserDetailsAsync(_currentUser);
+
+                            // Upsert in MongoDB
+                            var mongoUser = new MongoUser
+                            {
+                                Email = userInfo.Email,
+                                Name = userInfo.UserMetadata?.Name ?? userInfo.Email,
+                                LastSignInAt = DateTime.UtcNow,
+                                CreatedAt = userInfo.CreatedAt,
+                                Provider = "Form",
+                                AvatarUrl = userInfo.UserMetadata?.AvatarUrl
+                            };
+                            await _mongoUserService.UpsertUserAsync(mongoUser);
                             return true;
                         }
                     }
@@ -462,82 +514,5 @@ namespace BlazorMauiApp1.Services
                 Console.WriteLine($"Error loading user from storage: {ex.Message}");
             }
         }
-    }
-
-    // Helper classes for Google OAuth
-    public class TokenResponse
-    {
-        [JsonPropertyName("access_token")]
-        public string? AccessToken { get; set; }
-        
-        [JsonPropertyName("refresh_token")]
-        public string? RefreshToken { get; set; }
-        
-        [JsonPropertyName("expires_in")]
-        public int ExpiresIn { get; set; }
-        
-        [JsonPropertyName("token_type")]
-        public string? TokenType { get; set; }
-    }
-
-    public class GoogleUserInfo
-    {
-        [JsonPropertyName("id")]
-        public string Id { get; set; } = string.Empty;
-        
-        [JsonPropertyName("email")]
-        public string Email { get; set; } = string.Empty;
-        
-        [JsonPropertyName("name")]
-        public string Name { get; set; } = string.Empty;
-        
-        [JsonPropertyName("given_name")]
-        public string GivenName { get; set; } = string.Empty;
-        
-        [JsonPropertyName("family_name")]
-        public string FamilyName { get; set; } = string.Empty;
-        
-        [JsonPropertyName("picture")]
-        public string Picture { get; set; } = string.Empty;
-        
-        [JsonPropertyName("verified_email")]
-        public bool EmailVerified { get; set; }
-    }
-
-    // Add SupabaseUserInfo model for deserialization
-    public class SupabaseUserInfo
-    {
-        [JsonPropertyName("id")]
-        public string Id { get; set; } = string.Empty;
-
-        [JsonPropertyName("email")]
-        public string Email { get; set; } = string.Empty;
-
-        [JsonPropertyName("email_confirmed")]
-        public bool EmailConfirmed { get; set; }
-
-        [JsonPropertyName("created_at")]
-        public DateTime CreatedAt { get; set; }
-
-        [JsonPropertyName("user_metadata")]
-        public SupabaseUserMetadata? UserMetadata { get; set; }
-    }
-
-    public class SupabaseUserMetadata
-    {
-        [JsonPropertyName("name")]
-        public string? Name { get; set; }
-
-        [JsonPropertyName("avatar_url")]
-        public string? AvatarUrl { get; set; }
-
-        [JsonPropertyName("given_name")]
-        public string? GivenName { get; set; }
-
-        [JsonPropertyName("family_name")]
-        public string? FamilyName { get; set; }
-
-        [JsonPropertyName("picture")]
-        public string? Picture { get; set; }
     }
 }

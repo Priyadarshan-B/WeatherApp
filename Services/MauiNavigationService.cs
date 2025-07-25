@@ -10,9 +10,7 @@ namespace BlazorMauiApp1.Services
             where TBlazorComponent : IComponent
         {
             System.Diagnostics.Debug.WriteLine($"MauiNavigationService: NavigateToBlazorMauiPage called for type: {typeof(TBlazorComponent).Name}");
-            
-            // Ensure this runs on the main UI thread, especially important for UI operations
-            MainThread.BeginInvokeOnMainThread(() =>
+                        MainThread.BeginInvokeOnMainThread(() =>
             {
                 try
                 {

@@ -24,6 +24,9 @@ namespace BlazorMauiApp1
 
             builder.Services.AddMauiBlazorWebView();
             builder.Services.AddSingleton<IMauiNavigationService, MauiNavigationService>();
+            builder.Services.AddSingleton<MongoUserService>(); 
+            builder.Services.AddSingleton<IAuthService, AuthService>();
+            builder.Services.AddSingleton<App>();
 
 
 #if DEBUG
