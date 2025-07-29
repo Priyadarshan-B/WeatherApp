@@ -1,17 +1,33 @@
 @page "/weather"
 @using BlazorMauiApp1.Models
+@using BlazorMauiApp1.Services
+@inject UserFavoriteCitiesService FavoriteCitiesService
+@inject IEmailService EmailService
+@inject IAuthService AuthService
 
 <h2 class="text-center my-4">🌤️ Weather Forecast - India</h2>
 
 <div class="container">
 
-    <!-- Error Display -->
-    @if (!string.IsNullOrEmpty(errorMessage))
+    @if (!string.IsNullOrEmpty(statusMessage))
     {
-        <div class="alert alert-danger text-center">@errorMessage</div>
+        <div class="alert @(isError ? "alert-danger" : "alert-success") text-center">@statusMessage</div>
     }
 
-    <!-- Temperature Unit Toggle -->
+    @if (userFavoriteCities.Any())
+    {
+        <div class="mb-4 text-center">
+            <h5 class="mb-3">⭐ Your Favorites</h5>
+            @foreach (var city in userFavoriteCities)
+            {
+                <button class="btn btn-outline-primary btn-sm me-2 mb-2" @onclick="() => SelectFavoriteCity(city)">
+                    @city
+                </button>
+            }
+        </div>
+        <hr/>
+    }
+
     <div class="form-check form-switch d-flex justify-content-end mb-3">
         <input class="form-check-input" type="checkbox" role="switch" id="unitToggle" @bind="isFahrenheit" />
         <label class="form-check-label ms-2" for="unitToggle">
@@ -19,18 +35,11 @@
         </label>
     </div>
 
-    <!-- City Search -->
-    <div class="row mb-3">
-        <div class="col-md-6 mx-auto">
-            <input class="form-control" type="text" placeholder="Search city..." @bind="searchTerm" @bind:event="oninput" />
-        </div>
-    </div>
-
-    <!-- City Dropdown -->
     <div class="row mb-4">
         <div class="col-md-6 mx-auto">
+            <input class="form-control mb-2" type="text" placeholder="Search city for forecast..." @bind="searchTerm" @bind:event="oninput" />
             <select class="form-select" @onchange="OnCitySelected">
-                <option disabled selected value="">-- Select a city --</option>
+                <option disabled selected value="">-- Select a city for forecast --</option>
                 @foreach (var city in FilteredCities)
                 {
                     <option value="@city">@city</option>
@@ -39,7 +48,6 @@
         </div>
     </div>
 
-    <!-- Loading -->
     @if (isLoading)
     {
         <div class="text-center my-4">
@@ -49,15 +57,19 @@
         </div>
     }
 
-    <!-- Forecast -->
     @if (!isLoading && forecast != null)
     {
         <div class="row">
             <div class="col-md-8 mx-auto">
-                <!-- Current Weather -->
                 <div class="card shadow-sm mb-4 text-center">
                     <div class="card-body">
-                        <h4>@forecast.Location.Name, @forecast.Location.Region</h4>
+                        <div class="d-flex justify-content-center align-items-center mb-2">
+                            <h4 class="mb-0 me-3">@forecast.Location.Name, @forecast.Location.Region</h4>
+                            <button class="btn btn-sm btn-outline-success" @onclick="SendEmailReport" disabled="@(isSendingEmail || !isUserAuthenticated)" title="@(isUserAuthenticated ? "Email this forecast" : "Please log in to use this feature")">
+                                <i class="bi bi-envelope"></i>
+                                @(isSendingEmail ? "Sending..." : "Email Me")
+                            </button>
+                        </div>
                         <p>
                             <strong>Now:</strong>
                             @(isFahrenheit ? $"{forecast.Current.TempF} °F" : $"{forecast.Current.TempC} °C") -
@@ -65,8 +77,6 @@
                         </p>
                     </div>
                 </div>
-
-                <!-- 7-Day Forecast -->
                 <div class="row row-cols-1 row-cols-md-3 g-4">
                     @foreach (var day in forecast.Forecast.Forecastday)
                     {
@@ -88,6 +98,35 @@
             </div>
         </div>
     }
+
+    <hr class="my-4"/>
+
+    <div class="row mb-4">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Manage Favorite Cities</h5>
+                    <p class="card-text">Select cities to add to your favorites list.</p>
+                    <div class="mb-3">
+                        <select multiple class="form-select" style="height: 100px;" @onchange="OnFavoriteCitySelected">
+                            @foreach (var city in cities.OrderBy(c => c))
+                            {
+                                <option value="@city">@city</option>
+                            }
+                        </select>
+                    </div>
+                    @if (selectedFavorites.Any())
+                    {
+                        <p><strong>Selected to add:</strong> @string.Join(", ", selectedFavorites)</p>
+                    }
+                    <button class="btn btn-primary" @onclick="AddSelectedFavoritesAsync" disabled="@(!selectedFavorites.Any() || !isUserAuthenticated)" title="@(isUserAuthenticated ? "Add to your favorites" : "Please log in to use this feature")">
+                        Add to Favorites
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 @code {
@@ -95,22 +134,123 @@
     private string searchTerm = "";
     private bool isFahrenheit = false;
     private bool isLoading = false;
-    private string errorMessage = "";
-
+    private string statusMessage = "";
+    private bool isError = false;
     private WeatherForecastApiResponse? forecast;
+    private List<string> selectedFavorites = new();
+    private List<string> userFavoriteCities = new();
+
+    // New state properties
+    private bool isSendingEmail = false;
+    private bool isUserAuthenticated = false;
 
     private readonly List<string> cities = new()
     {
-        "Delhi", "Mumbai", "Bengaluru", "Hyderabad", "Chennai",
-        "Kolkata", "Pune", "Ahmedabad", "Jaipur", "Surat",
-        "Lucknow", "Bhopal", "Visakhapatnam", "Chandigarh", "Coimbatore",
-        "Nagpur", "Patna", "Indore", "Thiruvananthapuram", "Madurai"
+        "Delhi", "Mumbai", "Bengaluru", "Hyderabad", "Chennai", "Kolkata", "Pune", "Ahmedabad", "Jaipur", "Surat",
+        "Lucknow", "Bhopal", "Visakhapatnam", "Chandigarh", "Coimbatore", "Nagpur", "Patna", "Indore", "Thiruvananthapuram", "Madurai"
     };
 
-    private IEnumerable<string> FilteredCities =>
-        string.IsNullOrWhiteSpace(searchTerm)
-            ? cities
-            : cities.Where(c => c.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+    private IEnumerable<string> FilteredCities => string.IsNullOrWhiteSpace(searchTerm)
+        ? cities.OrderBy(c => c)
+        : cities.Where(c => c.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).OrderBy(c => c);
+
+    protected override async Task OnInitializedAsync()
+    {
+        isUserAuthenticated = await AuthService.IsAuthenticatedAsync();
+        if (isUserAuthenticated)
+        {
+            await LoadUserFavoritesAsync();
+        }
+    }
+
+    private async Task LoadUserFavoritesAsync()
+    {
+        var user = await AuthService.GetCurrentUserAsync();
+        if(user != null)
+        {
+             userFavoriteCities = await FavoriteCitiesService.GetFavoriteCitiesAsync(user.Id);
+        }
+    }
+
+    private async Task SelectFavoriteCity(string city)
+    {
+        selectedCity = city;
+        await LoadForecastAsync();
+    }
+
+    private void OnFavoriteCitySelected(ChangeEventArgs e)
+    {
+        if (e.Value is string[] selectedValues)
+        {
+            selectedFavorites = selectedValues.ToList();
+        }
+    }
+
+    private async Task AddSelectedFavoritesAsync()
+    {
+        var user = await AuthService.GetCurrentUserAsync();
+        if (user == null || !selectedFavorites.Any()) return;
+
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            await FavoriteCitiesService.AddFavoriteCitiesAsync(user.Id, selectedFavorites);
+            statusMessage = "Favorite cities were successfully updated!";
+            isError = false;
+            selectedFavorites.Clear();
+            await LoadUserFavoritesAsync();
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error adding favorites: {ex.Message}";
+            isError = true;
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+    
+    private async Task SendEmailReport()
+    {
+        if (forecast == null)
+        {
+            statusMessage = "Please select a city to get a forecast first.";
+            isError = true;
+            return;
+        }
+
+        isSendingEmail = true;
+        StateHasChanged();
+
+        try
+        {
+            var user = await AuthService.GetUserDetailsAsync();
+            if (user == null || string.IsNullOrEmpty(user.Email))
+            {
+                statusMessage = "Could not find your email. Please ensure you are logged in.";
+                isError = true;
+                return;
+            }
+
+            await EmailService.SendWeatherReportAsync(user.Email, user.Name, forecast);
+            @* await EmailService.SendWeatherReportAsync("priyadarshan.cs22@bitsathy.ac.in", user.Name, forecast); *@
+
+            statusMessage = $"Weather report sent to {user.Email} successfully!";
+            isError = false;
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Failed to send email: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            isSendingEmail = false;
+            StateHasChanged();
+        }
+    }
 
     private async Task OnCitySelected(ChangeEventArgs e)
     {
@@ -123,8 +263,11 @@
 
     private async Task LoadForecastAsync()
     {
+        if(string.IsNullOrWhiteSpace(selectedCity)) return;
+
         isLoading = true;
-        errorMessage = "";
+        statusMessage = "";
+        isError = false;
         forecast = null;
 
         var apiKey = "a239da81dc2a4cceb05154414251304";
@@ -134,21 +277,25 @@
         {
             using var client = new HttpClient();
             var response = await client.GetAsync(url);
-
             if (response.IsSuccessStatusCode)
             {
                 forecast = await response.Content.ReadFromJsonAsync<WeatherForecastApiResponse>();
                 if (forecast == null)
-                    errorMessage = "Unable to parse weather data.";
+                {
+                    statusMessage = "Unable to parse weather data.";
+                    isError = true;
+                }
             }
             else
             {
-                errorMessage = $"Error: {response.ReasonPhrase}";
+                statusMessage = $"Error fetching forecast: {response.ReasonPhrase}";
+                isError = true;
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Exception: {ex.Message}";
+            statusMessage = $"Exception: {ex.Message}";
+            isError = true;
         }
 
         isLoading = false;
